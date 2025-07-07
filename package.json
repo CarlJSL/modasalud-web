@@ -1,0 +1,14 @@
+{
+  "name": "tailwind-docker-app",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx tailwindcss -i ./app/css/input.css -o ./app/css/output.css"
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.1.10"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.10"
+  }
+}
