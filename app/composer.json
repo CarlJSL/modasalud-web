@@ -1,0 +1,14 @@
+{
+    "name": "carlos/ecommerce",
+    "description": "Proyecto Escalable con Dotenv",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Carlos JSL"
+        }
+    ],
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    }
+}
