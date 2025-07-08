@@ -468,6 +468,9 @@
         document.getElementById('orderModalTitle').textContent = 'Nueva Orden';
         document.getElementById('submitOrderText').textContent = 'Crear Orden';
 
+        // Habilitar el formulario (en caso de que esté deshabilitado por una orden anterior)
+        enableOrderForm();
+
         clearOrderFormErrors();
         loadOrderData();
         updateProductsList();
@@ -483,6 +486,9 @@
         document.getElementById('orderFormAction').value = 'update';
         document.getElementById('orderModalTitle').textContent = 'Editar Orden';
         document.getElementById('submitOrderText').textContent = 'Actualizar Orden';
+
+        // Habilitar el formulario (en caso de que esté deshabilitado)
+        enableOrderForm();
 
         clearOrderFormErrors();
         loadOrderData();
@@ -808,21 +814,87 @@
     document.getElementById('discount_amount').addEventListener('input', updateOrderTotal);
     document.getElementById('coupon_id').addEventListener('change', updateOrderTotal);
 
+    // Función para deshabilitar el formulario y el botón
+    function disableOrderForm() {
+        const form = document.getElementById('orderForm');
+        const submitButton = document.getElementById('submitOrderText').parentElement;
+        
+        // Deshabilitar el botón de envío
+        submitButton.disabled = true;
+        submitButton.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        // Deshabilitar todos los campos del formulario
+        const formElements = form.querySelectorAll('input, select, textarea, button');
+        formElements.forEach(element => {
+            if (element.type !== 'hidden' && element !== submitButton) {
+                element.disabled = true;
+                element.classList.add('opacity-50');
+            }
+        });
+        
+        // Deshabilitar botones de acción en la tabla de productos
+        const actionButtons = document.querySelectorAll('#orderProductsTable button');
+        actionButtons.forEach(button => {
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+        });
+    }
+
+    // Función para habilitar el formulario y el botón (solo en caso de error)
+    function enableOrderForm() {
+        const form = document.getElementById('orderForm');
+        const submitButton = document.getElementById('submitOrderText').parentElement;
+        
+        // Habilitar el botón de envío
+        submitButton.disabled = false;
+        submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        
+        // Habilitar todos los campos del formulario
+        const formElements = form.querySelectorAll('input, select, textarea, button');
+        formElements.forEach(element => {
+            if (element.type !== 'hidden') {
+                element.disabled = false;
+                element.classList.remove('opacity-50');
+            }
+        });
+        
+        // Habilitar botones de acción en la tabla de productos
+        const actionButtons = document.querySelectorAll('#orderProductsTable button');
+        actionButtons.forEach(button => {
+            button.disabled = false;
+            button.classList.remove('opacity-50', 'cursor-not-allowed');
+        });
+    }
+
     // Función para enviar formulario de orden
     function submitOrder() {
+        console.log('Iniciando envío de orden...');
+
+        // Verificar si ya se está procesando una orden
+        const submitButton = document.getElementById('submitOrderText').parentElement;
+        if (submitButton.disabled) {
+            console.log('Ya se está procesando una orden');
+            return;
+        }
+
         const form = document.getElementById('orderForm');
         const formData = new FormData(form);
 
         // Agregar productos al FormData
         formData.append('items', JSON.stringify(orderProducts));
+        console.log('Productos a enviar:', orderProducts);
 
-        const isNewClient = document.getElementById('is_new_client').value ;
+        const isNewClient = document.getElementById('is_new_client').value;
         formData.append('is_new_client', isNewClient);
+        console.log('Es nuevo cliente:', isNewClient);
 
         // Validar campos requeridos
         if (!validateOrderForm()) {
+            console.log('Validación del formulario falló');
             return;
         }
+
+        console.log('Validación del formulario exitosa');
 
         // Detectar si se está creando un cliente nuevo
         const clientId = formData.get('client_id');
@@ -830,51 +902,100 @@
 
         if (clientId === '__new__') {
             formData.append('is_new_client', '1');
-            formData.append('name', document.getElementById('new_client_name').value.trim());
-            formData.append('email', document.getElementById('new_client_email').value.trim());
-            formData.append('phone', document.getElementById('new_client_phone').value.trim());
-            formData.append('gender', document.getElementById('new_client_gender')?.value || '');
-            formData.append('birth_date', document.getElementById('new_client_birth')?.value || '');
+            formData.append('new_client_name', document.getElementById('new_client_name').value.trim());
+            formData.append('new_client_email', document.getElementById('new_client_email').value.trim());
+            formData.append('new_client_phone', document.getElementById('new_client_phone').value.trim());
+            formData.append('new_client_gender', document.getElementById('new_client_gender')?.value || '');
+            formData.append('new_client_birth', document.getElementById('new_client_birth')?.value || '');
         }
 
         // Detectar si se está creando una dirección nueva
         if (addressId === '__new__') {
             formData.append('is_new_address', '1');
-            formData.append('address', document.getElementById('new_address').value.trim());
-            formData.append('city', document.getElementById('new_city').value.trim());
-            formData.append('region', document.getElementById('new_region').value.trim());
-            formData.append('postal_code', document.getElementById('new_postal_code').value.trim());
-            formData.append('delivery_phone', document.getElementById('new_delivery_phone').value.trim());
+            formData.append('new_address', document.getElementById('new_address').value.trim());
+            formData.append('new_city', document.getElementById('new_city').value.trim());
+            formData.append('new_region', document.getElementById('new_region').value.trim());
+            formData.append('new_postal_code', document.getElementById('new_postal_code').value.trim());
+            formData.append('new_delivery_phone', document.getElementById('new_delivery_phone').value.trim());
         }
+
+        // Deshabilitar formulario y botón inmediatamente
+        disableOrderForm();
 
         // Mostrar loading
         document.getElementById('submitOrderText').innerHTML =
             '<i class="fas fa-spinner fa-spin mr-1"></i>Guardando...';
 
+        console.log('Enviando datos al servidor...');
+
+        // Mostrar todos los datos que se están enviando
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+
         fetch('orders.php', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
-                    showOrderFormMessage(data.message, 'success');
+                    // Mostrar mensaje de éxito con botón de PDF
+                    let successMessage = data.message;
+                    if (data.pdf_url && document.getElementById('orderFormAction').value === 'create') {
+                        successMessage += `
+                            <div class="mt-3 flex gap-2">
+                                <button type="button" onclick="window.open('${data.pdf_url}', '_blank')" 
+                                        class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-file-pdf mr-2"></i>
+                                    Ver PDF de la Orden
+                                </button>
+                                <button type="button" onclick="downloadOrderPDF('${data.pdf_url}', '${data.order_id}')" 
+                                        class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Descargar PDF
+                                </button>
+                            </div>
+                        `;
+                    }
+
+                    showOrderFormMessage(successMessage, 'success');
+
+                    // Cambiar el texto del botón a "Orden Creada" y mantenerlo deshabilitado
+                    document.getElementById('submitOrderText').innerHTML =
+                        '<i class="fas fa-check mr-1"></i>Orden Creada';
+
                     setTimeout(() => {
                         location.reload();
-                    }, 1500);
+                    }, 5000);
+                    // No recargar automáticamente para permitir usar los botones de PDF
+                    // El usuario puede cerrar el modal manualmente cuando termine
                 } else {
+                    // En caso de error, habilitar el formulario nuevamente
+                    enableOrderForm();
+                    
                     if (data.errors) {
                         displayOrderFormErrors(data.errors);
                     } else {
                         showOrderFormMessage(data.message, 'error');
                     }
+                    
+                    // Restaurar el texto del botón
+                    document.getElementById('submitOrderText').textContent =
+                        document.getElementById('orderFormAction').value === 'create' ? 'Crear Orden' : 'Actualizar Orden';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
+                
+                // En caso de error de red, habilitar el formulario nuevamente
+                enableOrderForm();
+                
                 showOrderFormMessage('Error al procesar la solicitud', 'error');
-            })
-            .finally(() => {
+                
+                // Restaurar el texto del botón
                 document.getElementById('submitOrderText').textContent =
                     document.getElementById('orderFormAction').value === 'create' ? 'Crear Orden' : 'Actualizar Orden';
             });
@@ -1017,28 +1138,49 @@
         const addressId = document.getElementById('address_id').value;
 
         // Validar cliente
-      
+        if (!clientId) {
+            showFieldError('client_id', 'Debe seleccionar un cliente');
+            isValid = false;
+        }
 
         // Si es nuevo cliente, validar sus campos obligatorios
         if (clientId === '__new__') {
-            const requiredNewClientFields = ['new_client_name', 'new_client_email'];
+            const requiredNewClientFields = ['new_client_name', 'new_client_email', 'search_dni'];
             requiredNewClientFields.forEach(field => {
                 const el = document.getElementById(field);
-                if (!el.value.trim()) {
+                if (!el || !el.value.trim()) {
                     showFieldError(field, 'Este campo es requerido');
                     isValid = false;
                 }
             });
+
+            // Validar formato de email
+            const email = document.getElementById('new_client_email').value;
+            if (email && !email.includes('@')) {
+                showFieldError('new_client_email', 'Formato de email inválido');
+                isValid = false;
+            }
+
+            // Validar DNI
+            const dni = document.getElementById('search_dni').value;
+            if (dni && (dni.length !== 8 || isNaN(dni))) {
+                showFieldError('search_dni', 'DNI debe tener 8 dígitos');
+                isValid = false;
+            }
         }
 
         // Validar dirección
-  
+        if (!addressId) {
+            showFieldError('address_id', 'Debe seleccionar una dirección');
+            isValid = false;
+        }
+
         // Si es nueva dirección, validar sus campos obligatorios
         if (addressId === '__new__') {
-            const requiredNewAddressFields = ['new_address', 'new_city'];
+            const requiredNewAddressFields = ['new_address', 'new_city', 'new_region'];
             requiredNewAddressFields.forEach(field => {
                 const el = document.getElementById(field);
-                if (!el.value.trim()) {
+                if (!el || !el.value.trim()) {
                     showFieldError(field, 'Este campo es requerido');
                     isValid = false;
                 }
@@ -1047,14 +1189,14 @@
 
         // Validar productos
         if (orderProducts.length === 0) {
-            showFieldError('items', 'Debe agregar al menos un producto');
+            showFieldError('products', 'Debe agregar al menos un producto');
             isValid = false;
         }
 
         // Validar total
         const total = parseFloat(document.getElementById('total_price').value);
         if (isNaN(total) || total <= 0) {
-            showFieldError('total_price', 'El total debe ser mayor a 0');
+            showFieldError('total_price', 'Agregue Productos');
             isValid = false;
         }
 
@@ -1123,9 +1265,20 @@
 
         if (messageDiv) {
             messageDiv.className = className;
-            messageDiv.textContent = message;
+            messageDiv.innerHTML = message; // Cambiado de textContent a innerHTML para permitir HTML
             messageDiv.classList.remove('hidden');
         }
+    }
+
+    // Función para descargar PDF de orden
+    function downloadOrderPDF(pdfUrl, orderId) {
+        // Crear un enlace temporal para forzar descarga
+        const link = document.createElement('a');
+        link.href = pdfUrl + '&download=1';
+        link.download = `orden_${orderId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     // Inicializar al cargar la página

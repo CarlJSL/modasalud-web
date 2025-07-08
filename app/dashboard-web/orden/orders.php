@@ -23,6 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
 
         switch ($action) {
             case 'create':
+                // Validar que se enviaron datos requeridos para evitar warnings
+                if (empty($_POST['is_new_client']) && empty($_POST['client_id']) && empty($_POST['items'])) {
+                    echo json_encode(['success' => false, 'message' => 'Datos incompletos para crear orden']);
+                    exit;
+                }
+                
                 if ($_POST['is_new_client'] == '1') {
                     $data = [
                         'client' => [
@@ -30,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                             'email' => $_POST['new_client_email'] ?? '',
                             'phone' => $_POST['new_client_phone'] ?? '',
                             'dni' => $_POST['search_dni'] ?? '',
-                            'gender' => $_POST['new__client_gender'] ?? '',
+                            'gender' => $_POST['new_client_gender'] ?? '',
                             'birth_date' => $_POST['new_client_birth'] ?? null
                         ],
                         'address' => [
@@ -74,9 +80,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
 
                     try {
                         $result = $model->createCompleteOrder($data);
-                        echo json_encode(['success' => true, 'message' => 'Orden creada exitosamente', 'order_id' => $result]);
+                        echo json_encode([
+                            'success' => true, 
+                            'message' => 'Orden creada exitosamente', 
+                            'order_id' => $result,
+                            'pdf_url' => 'orden_pdf.php?id=' . $result
+                        ]);
                     } catch (Exception $e) {
-                        echo json_encode(['success' => false, 'message' => 'Error al crear orden', 'error' => $e->getMessage()]);
+                        error_log('Error al crear orden: ' . $e->getMessage());
+                        echo json_encode([
+                            'success' => false, 
+                            'message' => 'Error al crear orden: ' . $e->getMessage(), 
+                            'error' => $e->getMessage(),
+                            'debug_data' => $data // Para debugging
+                        ]);
                     }
                     break;
                 } else {
@@ -108,7 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     }
 
                     $result = $model->create($data);
-                    echo json_encode(['success' => true, 'message' => 'Orden creada exitosamente', 'order_id' => $result]);
+                    echo json_encode([
+                        'success' => true, 
+                        'message' => 'Orden creada exitosamente', 
+                        'order_id' => $result,
+                        'pdf_url' => 'orden_pdf.php?id=' . $result
+                    ]);
                     break;
                 }
                 break;
@@ -547,6 +569,13 @@ include_once './../includes/head.php';
                                                         title="Ver detalles">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
+                                                    
+                                                    <button onclick="window.open('orden_pdf.php?id=<?= $order['id'] ?>', '_blank')"
+                                                        class="text-purple-600 hover:text-purple-900 text-xs p-1"
+                                                        title="Ver PDF">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </button>
+                                                    
                                                     <?php if ($order['status'] != 'COMPLETED' && $order['status'] != 'CANCELLED'): ?>
                                                         <button onclick="openEditModal(<?= $order['id'] ?>)"
                                                             class="text-green-600 hover:text-green-900 text-xs p-1"
