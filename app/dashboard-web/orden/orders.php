@@ -50,7 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                             'total_price' => (float)$_POST['total_price'],
                             'status' => $_POST['status'] ?? 'PENDING',
                             'discount_amount' => (float)($_POST['discount_amount'] ?? 0),
-                            'coupon_id' => !empty($_POST['coupon_id']) ? (int)$_POST['coupon_id'] : null
+                            'coupon_id' => !empty($_POST['coupon_id']) ? (int)$_POST['coupon_id'] : null,
+                            'created_by' => $_SESSION['usuario_id']
                         ],
                         'items' => json_decode($_POST['items'], true) ?? [],
                         'payment' => [
@@ -84,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                             'success' => true, 
                             'message' => 'Orden creada exitosamente', 
                             'order_id' => $result,
-                            'pdf_url' => 'orden_pdf.php?id=' . $result
+                            'pdf_url' => '../pdf/orden_pdf.php?id=' . $result
                         ]);
                     } catch (Exception $e) {
                         error_log('Error al crear orden: ' . $e->getMessage());
@@ -104,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                         'status' => $_POST['status'] ?? 'PENDING',
                         'discount_amount' => (float)($_POST['discount_amount'] ?? 0),
                         'coupon_id' => !empty($_POST['coupon_id']) ? (int)$_POST['coupon_id'] : null,
+                        'created_by' => $_SESSION['usuario_id'],
                         'items' => json_decode($_POST['items'], true) ?? [],
                         'payment' => [
                             'method' => $_POST['payment_method'] ?? 'CASH',
@@ -129,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                         'success' => true, 
                         'message' => 'Orden creada exitosamente', 
                         'order_id' => $result,
-                        'pdf_url' => 'orden_pdf.php?id=' . $result
+                        'pdf_url' => '../pdf/orden_pdf.php?id=' . $result
                     ]);
                     break;
                 }
@@ -325,8 +327,8 @@ include_once './../includes/head.php';
                     <!-- Título y descripción de la página -->
                     <div class="flex justify-between items-start">
                         <div>
-                            <h1 class="text-lg font-semibold text-gray-900 mb-0.5">Gestión de Órdenes</h1>
-                            <p class="text-xs text-gray-600">Administra y visualiza todas las órdenes registradas</p>
+                            <h1 class="text-lg font-semibold text-gray-900 mb-0.5">Gestión de Ventas</h1>
+                            <p class="text-xs text-gray-600">Administra, Visualiza y Realiza Ventas</p>
                         </div>
                     </div>
                 </div>
@@ -570,7 +572,7 @@ include_once './../includes/head.php';
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                     
-                                                    <button onclick="window.open('orden_pdf.php?id=<?= $order['id'] ?>', '_blank')"
+                                                    <button onclick="window.open('../pdf/orden_pdf.php?id=<?= $order['id'] ?>', '_blank')"
                                                         class="text-purple-600 hover:text-purple-900 text-xs p-1"
                                                         title="Ver PDF">
                                                         <i class="fas fa-file-pdf"></i>

@@ -299,8 +299,8 @@ class OrderModel
             $this->pdo->beginTransaction();
 
             // Insertar orden
-            $sql = "INSERT INTO {$this->table} (client_id, address_id, total_price, status, discount_amount, coupon_id, created_at)
-                    VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, NOW())";
+            $sql = "INSERT INTO {$this->table} (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at)
+                    VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW())";
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindValue(':client_id', $data['client_id'], PDO::PARAM_INT);
@@ -309,6 +309,7 @@ class OrderModel
             $stmt->bindValue(':status', $data['status'] ?? 'PENDING');
             $stmt->bindValue(':discount_amount', $data['discount_amount'] ?? 0);
             $stmt->bindValue(':coupon_id', $data['coupon_id'] ?? null, PDO::PARAM_INT);
+            $stmt->bindValue(':created_by', $data['created_by'] ?? null, PDO::PARAM_INT);
 
             $result = $stmt->execute();
 
@@ -405,8 +406,8 @@ class OrderModel
 
         // 4. Crear orden
         $stmt = $this->pdo->prepare("
-            INSERT INTO orders (client_id, address_id, total_price, status, discount_amount, coupon_id, created_at)
-            VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, NOW())
+            INSERT INTO orders (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at)
+            VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW())
         ");
         $stmt->execute([
             ':client_id'      => $clientId,
@@ -415,6 +416,7 @@ class OrderModel
             ':status'         => $data['order']['status'] ?? 'PENDING',
             ':discount_amount'=> $data['order']['discount_amount'] ?? 0,
             ':coupon_id'      => $data['order']['coupon_id'] ?? null,
+            ':created_by'     => $data['order']['created_by'] ?? null,
         ]);
         $orderId = $this->pdo->lastInsertId();
 
