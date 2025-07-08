@@ -213,9 +213,11 @@ class OrderModel
                 o.client_id,
                 o.address_id,
                 o.coupon_id,
+                o.created_by,
                 c.name AS client_name,
                 c.email AS client_email,
                 c.phone AS client_phone,
+                c.gender AS client_gender,
                 ca.address AS delivery_address,
                 ca.city AS delivery_city,
                 ca.region AS delivery_region,
@@ -223,11 +225,14 @@ class OrderModel
                 ca.phone AS delivery_phone,
                 cp.code AS coupon_code,
                 cp.discount_type AS coupon_type,
-                cp.discount_value AS coupon_value
+                cp.discount_value AS coupon_value,
+                u.username AS created_by_username,
+                u.email AS created_by_email
             FROM {$this->table} o
             LEFT JOIN clients c ON o.client_id = c.id
             LEFT JOIN client_addresses ca ON o.address_id = ca.id
             LEFT JOIN coupons cp ON o.coupon_id = cp.id
+            LEFT JOIN users u ON o.created_by = u.id
             WHERE o.id = :id";
 
         $stmt = $this->pdo->prepare($sql);

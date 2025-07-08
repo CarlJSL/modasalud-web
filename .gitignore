@@ -99,3 +99,11 @@ access.log
 # Sensitive data
 passwords.txt
 secrets.txt
+
+# Documentation folder
+documentation/
+
+# Configuración Empresa
+
+config/company_config.example.php
+config/company_config.php
