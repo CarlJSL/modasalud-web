@@ -40,6 +40,8 @@ class OrderModel
                 p.method AS payment_method,
                 p.status AS payment_status,
                 p.paid_at,
+                u.username AS created_by_username,
+                u.email AS created_by_email,
                 COUNT(DISTINCT oi.product_id) AS total_items,
                 SUM(oi.quantity) AS total_quantity
             FROM {$this->table} o
@@ -48,6 +50,7 @@ class OrderModel
             LEFT JOIN coupons cp ON o.coupon_id = cp.id
             LEFT JOIN payments p ON o.id = p.order_id
             LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN users u ON o.created_by = u.id
             WHERE 1=1";
 
         $conditions = [];
@@ -106,7 +109,7 @@ class OrderModel
             $sql .= " AND " . implode(" AND ", $conditions);
         }
 
-        $sql .= " GROUP BY o.id, c.name, c.email, c.phone, ca.address, ca.city, ca.region, cp.code, cp.discount_type, cp.discount_value, p.method, p.status, p.paid_at";
+        $sql .= " GROUP BY o.id, c.name, c.email, c.phone, ca.address, ca.city, ca.region, cp.code, cp.discount_type, cp.discount_value, p.method, p.status, p.paid_at, u.username, u.email";
         $sql .= " ORDER BY o.created_at DESC LIMIT :limit OFFSET :offset";
 
         $stmt = $this->pdo->prepare($sql);
