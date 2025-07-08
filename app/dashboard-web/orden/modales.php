@@ -1052,6 +1052,21 @@
                         </div>
                     </div>
                     
+                    <!-- Usuario Creador -->
+                    ${order.created_by_username ? `
+                    <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-user-cog text-indigo-600 mr-2"></i>
+                            Creado por
+                        </h3>
+                        <div class="space-y-2">
+                            <p><span class="font-medium">Usuario:</span> ${order.created_by_username}</p>
+                            <p><span class="font-medium">Email:</span> ${order.created_by_email || 'N/A'}</p>
+                            <p><span class="font-medium">Fecha de creación:</span> ${new Date(order.created_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
                     <!-- Información del Cliente -->
                     <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4">
                         <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">

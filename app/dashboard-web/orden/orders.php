@@ -512,6 +512,7 @@ include_once './../includes/head.php';
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pago</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creado por</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                     </tr>
@@ -559,6 +560,18 @@ include_once './../includes/head.php';
                                                     <span class="inline-flex items-center px-1 py-0.5 rounded text-xs font-medium <?= $paymentStatusColors[$order['payment_status']] ?? 'bg-gray-100 text-gray-800' ?>">
                                                         <?= $paymentStatuses[$order['payment_status']] ?? $order['payment_status'] ?>
                                                     </span>
+                                                </div>
+                                            </td>
+                                            <td class="px-3 py-2 text-sm text-gray-900">
+                                                <div>
+                                                    <?php if (!empty($order['created_by_username'])): ?>
+                                                        <p class="font-medium text-gray-900"><?= htmlspecialchars($order['created_by_username']) ?></p>
+                                                        <?php if (!empty($order['created_by_email'])): ?>
+                                                            <p class="text-xs text-gray-500"><?= htmlspecialchars($order['created_by_email']) ?></p>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <p class="text-xs text-gray-400 italic">Sistema</p>
+                                                    <?php endif; ?>
                                                 </div>
                                             </td>
                                             <td class="px-3 py-2 text-sm text-gray-900">
