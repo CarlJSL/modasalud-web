@@ -220,7 +220,7 @@ ob_start();
     <?php endif; ?>
     <!-- Título de la orden -->
     <div class="order-title">
-        ORDEN #<?= str_pad($order['id'], 6, '0', STR_PAD_LEFT) ?>
+        N° DE VENTA #<?= str_pad($order['id'], 6, '0', STR_PAD_LEFT) ?>
     </div>
     <!-- Info principal -->
     <div class="info-box">
