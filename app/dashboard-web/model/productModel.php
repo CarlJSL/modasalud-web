@@ -32,11 +32,17 @@ class ProductModel
                 p.status,
                 p.created_at,
                 c.name AS category_name,
-                pc.name AS product_category_name
+                pc.name AS product_category_name,
+                pi.image_url AS main_image
             FROM {$this->table} p
             LEFT JOIN product_category_mapping pcm ON p.id = pcm.product_id
             LEFT JOIN categories c ON pcm.category_id = c.id
             LEFT JOIN product_categories pc ON pcm.product_category_id = pc.id
+            LEFT JOIN (
+                SELECT product_id, image_url,
+                       ROW_NUMBER() OVER (PARTITION BY product_id ORDER BY created_at ASC) as rn
+                FROM product_images
+            ) pi ON p.id = pi.product_id AND pi.rn = 1
             WHERE p.deleted_at IS NULL";
 
         $conditions = [];
@@ -596,5 +602,241 @@ class ProductModel
         if ($time < 2592000) return 'hace ' . floor($time / 86400) . ' días';
         if ($time < 31536000) return 'hace ' . floor($time / 2592000) . ' meses';
         return 'hace ' . floor($time / 31536000) . ' años';
+    }
+
+    /**
+     * GESTIÓN DE IMÁGENES DE PRODUCTOS
+     */
+
+    /**
+     * Obtener todas las imágenes de un producto
+     */
+    public function getProductImages($productId)
+    {
+        $sql = "SELECT id, image_url, created_at 
+                FROM product_images 
+                WHERE product_id = :product_id 
+                ORDER BY created_at ASC";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['product_id' => $productId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Agregar imagen a un producto
+     */
+    public function addProductImage($productId, $imageUrl)
+    {
+        try {
+            $sql = "INSERT INTO product_images (product_id, image_url, created_at) 
+                    VALUES (:product_id, :image_url, NOW())";
+            
+            $stmt = $this->pdo->prepare($sql);
+            $result = $stmt->execute([
+                'product_id' => $productId,
+                'image_url' => $imageUrl
+            ]);
+
+            if ($result) {
+                return $this->pdo->lastInsertId();
+            }
+            return false;
+        } catch (PDOException $e) {
+            throw new Exception('Error al agregar imagen: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Eliminar imagen de producto
+     */
+    public function deleteProductImage($imageId)
+    {
+        try {
+            // Primero obtener la URL de la imagen para eliminar el archivo
+            $stmt = $this->pdo->prepare("SELECT image_url FROM product_images WHERE id = :id");
+            $stmt->execute(['id' => $imageId]);
+            $image = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($image) {
+                // Eliminar registro de la base de datos
+                $stmt = $this->pdo->prepare("DELETE FROM product_images WHERE id = :id");
+                $result = $stmt->execute(['id' => $imageId]);
+
+                if ($result) {
+                    // Eliminar archivo físico si existe
+                    $imagePath = __DIR__ . '/../../uploads/products/' . basename($image['image_url']);
+                    if (file_exists($imagePath)) {
+                        unlink($imagePath);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        } catch (PDOException $e) {
+            throw new Exception('Error al eliminar imagen: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener la imagen principal de un producto (la primera)
+     */
+    public function getMainProductImage($productId)
+    {
+        $sql = "SELECT image_url 
+                FROM product_images 
+                WHERE product_id = :product_id 
+                ORDER BY created_at ASC 
+                LIMIT 1";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['product_id' => $productId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ? $result['image_url'] : null;
+    }
+
+    /**
+     * Contar imágenes de un producto
+     */
+    public function countProductImages($productId)
+    {
+        $sql = "SELECT COUNT(*) as total FROM product_images WHERE product_id = :product_id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(['product_id' => $productId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'];
+    }
+
+    /**
+     * Subir y procesar imagen
+     */
+    public function uploadProductImage($file, $productId)
+    {
+        try {
+            // Validar archivo
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!in_array($file['type'], $allowedTypes)) {
+                throw new Exception('Tipo de archivo no permitido. Solo se permiten JPG, PNG, GIF y WebP.');
+            }
+
+            // Validar tamaño (5MB máximo)
+            $maxSize = 5 * 1024 * 1024; // 5MB
+            if ($file['size'] > $maxSize) {
+                throw new Exception('El archivo es demasiado grande. Máximo 5MB permitido.');
+            }
+
+            // Crear directorio si no existe
+            $uploadDir = __DIR__ . '/../../uploads/products/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+
+            // Generar nombre único
+            $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $fileName = 'product_' . $productId . '_' . uniqid() . '.' . $extension;
+            $filePath = $uploadDir . $fileName;
+
+            // Mover archivo
+            if (move_uploaded_file($file['tmp_name'], $filePath)) {
+                // Redimensionar imagen si es necesario
+                $this->resizeImage($filePath, 800, 600);
+
+                // Guardar en base de datos
+                $imageUrl = 'uploads/products/' . $fileName;
+                $imageId = $this->addProductImage($productId, $imageUrl);
+                
+                return [
+                    'success' => true,
+                    'image_id' => $imageId,
+                    'image_url' => $imageUrl,
+                    'file_name' => $fileName
+                ];
+            } else {
+                throw new Exception('Error al subir el archivo.');
+            }
+        } catch (Exception $e) {
+            throw new Exception('Error en upload: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Redimensionar imagen manteniendo proporción
+     */
+    private function resizeImage($filePath, $maxWidth = 800, $maxHeight = 600)
+    {
+        try {
+            $imageInfo = getimagesize($filePath);
+            if (!$imageInfo) return false;
+
+            $width = $imageInfo[0];
+            $height = $imageInfo[1];
+            $mimeType = $imageInfo['mime'];
+
+            // Solo redimensionar si es necesario
+            if ($width <= $maxWidth && $height <= $maxHeight) {
+                return true;
+            }
+
+            // Calcular nuevas dimensiones manteniendo proporción
+            $ratio = min($maxWidth / $width, $maxHeight / $height);
+            $newWidth = round($width * $ratio);
+            $newHeight = round($height * $ratio);
+
+            // Crear imagen desde archivo
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    $source = imagecreatefromjpeg($filePath);
+                    break;
+                case 'image/png':
+                    $source = imagecreatefrompng($filePath);
+                    break;
+                case 'image/gif':
+                    $source = imagecreatefromgif($filePath);
+                    break;
+                case 'image/webp':
+                    $source = imagecreatefromwebp($filePath);
+                    break;
+                default:
+                    return false;
+            }
+
+            // Crear nueva imagen redimensionada
+            $resized = imagecreatetruecolor($newWidth, $newHeight);
+            
+            // Preservar transparencia para PNG y GIF
+            if ($mimeType === 'image/png' || $mimeType === 'image/gif') {
+                imagealphablending($resized, false);
+                imagesavealpha($resized, true);
+                $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
+                imagefilledrectangle($resized, 0, 0, $newWidth, $newHeight, $transparent);
+            }
+
+            imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+            // Guardar imagen redimensionada
+            switch ($mimeType) {
+                case 'image/jpeg':
+                    imagejpeg($resized, $filePath, 85);
+                    break;
+                case 'image/png':
+                    imagepng($resized, $filePath, 6);
+                    break;
+                case 'image/gif':
+                    imagegif($resized, $filePath);
+                    break;
+                case 'image/webp':
+                    imagewebp($resized, $filePath, 85);
+                    break;
+            }
+
+            // Limpiar memoria
+            imagedestroy($source);
+            imagedestroy($resized);
+
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 }

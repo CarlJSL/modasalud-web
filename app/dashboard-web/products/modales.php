@@ -263,6 +263,28 @@
     </div>
 </div>
 
+<!-- Modal para Gestión de Imágenes -->
+<div id="imageManagerModal" class="fixed inset-0 bg-black bg-opacity-15 hidden z-50 items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fadeIn modal-content">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h5 class="text-lg font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-images text-blue-600 mr-2"></i>
+                Gestión de Imágenes del Producto
+            </h5>
+            <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closeModal('imageManagerModal')">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <div id="imageManagerContent">
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Cargando imágenes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     // Funciones JavaScript para manejar los modales de productos con Tailwind CSS
@@ -303,6 +325,23 @@
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
+            // Si es el modal de gestión de imágenes y hubo cambios, actualizar la tabla
+            if (modalId === 'imageManagerModal' && window.imageManagerChanged) {
+                // Mostrar mensaje usando el mismo sistema que los otros modales
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'fixed top-4 right-4 z-50 p-3 rounded-md text-sm bg-blue-50 text-blue-800 border border-blue-200 shadow-lg';
+                messageDiv.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Actualizando tabla de productos...';
+                document.body.appendChild(messageDiv);
+                
+                // Recargar la página para actualizar la tabla con las nuevas imágenes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+                
+                // Resetear flag
+                window.imageManagerChanged = false;
+            }
+            
             modal.classList.add('hidden');
             modal.style.display = 'none';
 
@@ -321,7 +360,7 @@
     // Cerrar modal al hacer clic en el fondo
     document.addEventListener('click', function(e) {
         // Verificar si se hizo clic en el overlay del modal (no en el contenido)
-        if (e.target.id === 'productModal' || e.target.id === 'editModal' || e.target.id === 'deleteModal' || e.target.id === 'detailModal') {
+        if (e.target.id === 'productModal' || e.target.id === 'editModal' || e.target.id === 'deleteModal' || e.target.id === 'detailModal' || e.target.id === 'imageManagerModal') {
             closeModal(e.target.id);
         }
     });
@@ -329,7 +368,7 @@
     // Cerrar modal con tecla Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            const modals = ['productModal', 'editModal', 'deleteModal', 'detailModal'];
+            const modals = ['productModal', 'editModal', 'deleteModal', 'detailModal', 'imageManagerModal'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
                 if (modal && !modal.classList.contains('hidden')) {
@@ -424,6 +463,8 @@
 
                     // Actualizar estado del botón después de cargar datos
                     setTimeout(updateSubmitButtonState, 100);
+
+
                 } else {
                     showFormMessage(data.message, 'error');
                 }
@@ -435,6 +476,8 @@
 
         showModal('productModal');
     }
+
+
 
     // Función para actualizar el estado del botón según los cambios
     function updateSubmitButtonState() {
@@ -566,8 +609,7 @@
         const images = product.images?.length ?
             product.images.map(url => `
                 <div class="relative group">
-                    <img src="${url}" alt="Imagen del producto" class="w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-indigo-300 transition-all duration-300 transform hover:scale-105" />
-                    <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 rounded-lg transition-all duration-300"></div>
+                    <img src="../../${url}" alt="Imagen del producto" class="w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-indigo-300 transition-all duration-300 transform hover:scale-105" />
                 </div>
             `).join('') :
             `<div class="text-center py-12 text-gray-400 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
@@ -1083,4 +1125,36 @@
 
         return isValid;
     }
+
+    // ==========================================
+    // SISTEMA DE NOTIFICACIONES (Compatible con image manager)
+    // ==========================================
+
+    function showFormMessage(message, type) {
+        const messageDiv = document.getElementById('formMessage');
+        let className = 'p-3 rounded-md text-sm ';
+
+        switch (type) {
+            case 'success':
+                className += 'bg-green-50 text-green-800 border border-green-200';
+                break;
+            case 'error':
+                className += 'bg-red-50 text-red-800 border border-red-200';
+                break;
+            case 'info':
+                className += 'bg-blue-50 text-blue-800 border border-blue-200';
+                break;
+            default:
+                className += 'bg-gray-50 text-gray-800 border border-gray-200';
+        }
+
+        if (messageDiv) {
+            messageDiv.className = className;
+            messageDiv.textContent = message;
+            messageDiv.classList.remove('hidden');
+        }
+    }
+
+    // Inicializar flag para cambios en el gestor de imágenes
+    window.imageManagerChanged = false;
 </script>
