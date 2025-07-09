@@ -427,6 +427,7 @@ include_once './../includes/head.php';
                                 <thead class="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imagen</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Talla</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
@@ -442,13 +443,20 @@ include_once './../includes/head.php';
                                                 #<?= $product['id'] ?>
                                             </td>
                                             <td class="px-3 py-2 whitespace-nowrap">
+                                                <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden">
+                                                    <?php if (!empty($product['main_image'])): ?>
+                                                        <img src="../../<?= htmlspecialchars($product['main_image']) ?>" 
+                                                             alt="<?= htmlspecialchars($product['name']) ?>"
+                                                             class="w-full h-full object-cover">
+                                                    <?php else: ?>
+                                                        <div class="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                                                            <i class="fas fa-image text-gray-400 text-lg"></i>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                            <td class="px-3 py-2 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
-                                                    <!-- Avatar con inicial -->
-                                                    <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center shadow-sm">
-                                                        <span class="text-white text-base font-bold">
-                                                            <?= strtoupper(mb_substr(htmlspecialchars($product['name']), 0, 1, 'UTF-8')) ?>
-                                                        </span>
-                                                    </div>
                                                     <!-- Info del producto -->
                                                     <div>
                                                         <div class="text-sm font-semibold text-gray-900 leading-tight">
@@ -514,6 +522,12 @@ include_once './../includes/head.php';
                                                     onclick="openDetailModal(<?= $product['id'] ?>)"
                                                     title="Ver detalles">
                                                     <i class="fas fa-eye"></i>
+                                                </button>
+
+                                                <button class="action-button text-purple-600 hover:text-purple-900 transition-colors p-1 rounded"
+                                                    onclick="openImageManagerModal(<?= $product['id'] ?>)"
+                                                    title="Gestionar imágenes">
+                                                    <i class="fas fa-images"></i>
                                                 </button>
 
                                                 <?php
@@ -639,6 +653,7 @@ include_once './../includes/head.php';
 
     <!-- Incluir componentes JavaScript -->
     <script src="../js/components.js"></script>
+    <script src="image_manager.js"></script>
     <script>
         // Inicializar componentes específicos de esta página
         document.addEventListener('DOMContentLoaded', function() {
