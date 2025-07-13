@@ -275,7 +275,8 @@ $filters = [
     'date_from' => $_GET['date_from'] ?? '',
     'date_to' => $_GET['date_to'] ?? '',
     'price_min' => $_GET['price_min'] ?? '',
-    'price_max' => $_GET['price_max'] ?? ''
+    'price_max' => $_GET['price_max'] ?? '',
+    'order_source' => $_GET['order_source'] ?? ''
 ];
 
 // Obtener datos para filtros
@@ -418,6 +419,14 @@ include_once './../includes/head.php';
                                         step="0.01" placeholder="0.00"
                                         class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
                                 </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Origen</label>
+                                    <select name="order_source" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                        <option value="">Todos</option>
+                                        <option value="WEB" <?= ($filters['order_source'] ?? '') === 'WEB' ? 'selected' : '' ?>>Cliente Web</option>
+                                        <option value="DASHBOARD" <?= ($filters['order_source'] ?? '') === 'DASHBOARD' ? 'selected' : '' ?>>Dashboard</option>
+                                    </select>
+                                </div>
                                 <div class="flex items-end">
                                     <button type="submit"
                                         class="w-full px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -512,7 +521,7 @@ include_once './../includes/head.php';
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pago</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creado por</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                                     </tr>
@@ -564,13 +573,21 @@ include_once './../includes/head.php';
                                             </td>
                                             <td class="px-3 py-2 text-sm text-gray-900">
                                                 <div>
-                                                    <?php if (!empty($order['created_by_username'])): ?>
-                                                        <p class="font-medium text-gray-900"><?= htmlspecialchars($order['created_by_username']) ?></p>
-                                                        <?php if (!empty($order['created_by_email'])): ?>
-                                                            <p class="text-xs text-gray-500"><?= htmlspecialchars($order['created_by_email']) ?></p>
-                                                        <?php endif; ?>
+                                                    <?php 
+                                                    $orderSource = $order['order_source'] ?? ($order['created_by'] ? 'DASHBOARD' : 'WEB');
+                                                    if ($orderSource === 'WEB'): ?>
+                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                            <i class="fas fa-globe mr-1"></i>
+                                                            Cliente Web
+                                                        </span>
                                                     <?php else: ?>
-                                                        <p class="text-xs text-gray-400 italic">Sistema</p>
+                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                            <i class="fas fa-user-tie mr-1"></i>
+                                                            Dashboard
+                                                        </span>
+                                                        <?php if (!empty($order['created_by_username'])): ?>
+                                                            <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars($order['created_by_username']) ?></p>
+                                                        <?php endif; ?>
                                                     <?php endif; ?>
                                                 </div>
                                             </td>

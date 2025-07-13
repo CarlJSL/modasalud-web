@@ -66,7 +66,7 @@
           <p class="text-center text-sm">o puedes</p>
           <hr class="border-gray-400">
         </div>
-        <button class="bg-white border border-gray-300 py-2 w-full rounded-xl mt-5 flex justify-center items-center text-sm hover:scale-105 duration-300 text-gray-500">
+       <!--  <button class="bg-white border border-gray-300 py-2 w-full rounded-xl mt-5 flex justify-center items-center text-sm hover:scale-105 duration-300 text-gray-500">
           <svg class="mr-3" width="30px" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
             <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
@@ -83,7 +83,12 @@
           </svg>
 
           Solicitar una Cuenta
-        </button>
+        </button> -->
+        <div class="mt-4 flex flex-col gap-2">
+          <button onclick="window.location.href='client-web/index.php'" type="button" class="bg-blue-600 text-white py-2 rounded-xl hover:scale-105 duration-300 flex items-center justify-center">
+            <i class="fas fa-store mr-2"></i> Ir a la Tienda
+          </button>
+        </div>
         <div class="mt-5 text-xs border-b border-gray-400 py-4 text-[#392E2C]">
           <a href="#">¿Olvidaste tu contraseña?</a>
         </div>

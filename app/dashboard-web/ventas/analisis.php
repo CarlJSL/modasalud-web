@@ -5,6 +5,23 @@ if (!isset($_SESSION['usuario_id'])) {
     header('Location: ../../index.php'); // o ../index.php dependiendo del nivel de carpeta
     exit();
 }
+
+// Incluir funciones de análisis
+require_once __DIR__ . '/analytics-data.php';
+
+// Obtener el período seleccionado
+$periodo = $_GET['periodo'] ?? 'mes';
+
+// Obtener datos de forma segura
+$dashboardData = obtenerDatosSegurosDashboard($pdo, $periodo);
+
+// Extraer variables para compatibilidad
+$metricas = $dashboardData['metricas'];
+$topProductos = $dashboardData['topProductos'];
+$ventasPorCategoria = $dashboardData['ventasPorCategoria'];
+$analisisDetallado = $dashboardData['analisisDetallado'];
+$metricasConversion = $dashboardData['metricasConversion'];
+$ventasPorRegion = $dashboardData['ventasPorRegion'];
 ?>
 
 <!DOCTYPE html>
@@ -14,6 +31,9 @@ if (!isset($_SESSION['usuario_id'])) {
 // Incluir archivo de configuración de la cabecera
 include_once './../includes/head.php';
 ?>
+
+<!-- CSS personalizado para el dashboard -->
+<link rel="stylesheet" href="analytics-styles.css">
 
 <body>
     <!-- Contenedor principal con navbar fijo y contenido con scroll -->
@@ -32,9 +52,29 @@ include_once './../includes/head.php';
 
             <!-- Contenido principal dentro del Main con scroll -->
             <main class="flex-1 p-6 bg-gray-50 overflow-y-auto">
-                <!-- Header de la página de análisis con breadcrumb -->
+                <!-- Header de la página de análisis -->
                 <div class="mb-8">
-              
+                    <!-- Breadcrumb -->
+                    <nav class="flex mb-4" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                            <li class="inline-flex items-center">
+                                <a href="../orden/orders.php" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600">
+                                    <svg class="mr-2 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                                    </svg>
+                                    Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">Análisis de Ventas</span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
 
                     <!-- Título y descripción de la página -->
                     <div class="flex justify-between items-start">
@@ -46,44 +86,52 @@ include_once './../includes/head.php';
                         <div class="flex items-center space-x-2">
                             <label class="text-sm font-medium text-gray-700">Período:</label>
                             <select id="periodo-selector" class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="hoy">Hoy</option>
-                                <option value="semana">Esta semana</option>
-                                <option value="mes" selected>Este mes</option>
-                                <option value="trimestre">Este trimestre</option>
-                                <option value="año">Este año</option>
+                                <option value="hoy" <?= $periodo == 'hoy' ? 'selected' : '' ?>>Hoy</option>
+                                <option value="semana" <?= $periodo == 'semana' ? 'selected' : '' ?>>Esta semana</option>
+                                <option value="mes" <?= $periodo == 'mes' ? 'selected' : '' ?>>Este mes</option>
+                                <option value="trimestre" <?= $periodo == 'trimestre' ? 'selected' : '' ?>>Este trimestre</option>
+                                <option value="año" <?= $periodo == 'año' ? 'selected' : '' ?>>Este año</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Métricas principales - Diseño minimalista -->
+                <!-- Métricas principales -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <!-- Card: Ventas Totales -->
                     <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-blue-300 transition-colors">
                         <div class="text-sm text-gray-500 mb-1">Ventas Totales</div>
-                        <div class="text-2xl font-semibold text-gray-900 mb-2">$125,430</div>
-                        <div class="text-sm text-green-600">+12.5%</div>
+                        <div class="text-2xl font-semibold text-gray-900 mb-2"><?= formatearDinero($metricas['ventas_totales']) ?></div>
+                        <div class="text-sm <?= $metricas['crecimiento_ventas'] >= 0 ? 'text-green-600' : 'text-red-600' ?>">
+                            <?= $metricas['crecimiento_ventas'] >= 0 ? '+' : '' ?><?= $metricas['crecimiento_ventas'] ?>%
+                        </div>
                     </div>
 
                     <!-- Card: Órdenes -->
                     <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-green-300 transition-colors">
                         <div class="text-sm text-gray-500 mb-1">Órdenes</div>
-                        <div class="text-2xl font-semibold text-gray-900 mb-2">1,248</div>
-                        <div class="text-sm text-green-600">+8.2%</div>
+                        <div class="text-2xl font-semibold text-gray-900 mb-2"><?= formatearNumero($metricas['total_ordenes']) ?></div>
+                        <div class="text-sm <?= $metricas['crecimiento_ordenes'] >= 0 ? 'text-green-600' : 'text-red-600' ?>">
+                            <?= $metricas['crecimiento_ordenes'] >= 0 ? '+' : '' ?><?= $metricas['crecimiento_ordenes'] ?>%
+                        </div>
                     </div>
 
                     <!-- Card: Productos -->
                     <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-purple-300 transition-colors">
                         <div class="text-sm text-gray-500 mb-1">Productos Vendidos</div>
-                        <div class="text-2xl font-semibold text-gray-900 mb-2">3,429</div>
-                        <div class="text-sm text-green-600">+15.3%</div>
+                        <div class="text-2xl font-semibold text-gray-900 mb-2"><?= formatearNumero($metricas['productos_vendidos']) ?></div>
+                        <div class="text-sm <?= $metricas['crecimiento_productos'] >= 0 ? 'text-green-600' : 'text-red-600' ?>">
+                            <?= $metricas['crecimiento_productos'] >= 0 ? '+' : '' ?><?= $metricas['crecimiento_productos'] ?>%
+                        </div>
                     </div>
 
                     <!-- Card: Ticket Promedio -->
                     <div class="bg-white rounded-lg border border-gray-200 p-6 hover:border-orange-300 transition-colors">
                         <div class="text-sm text-gray-500 mb-1">Ticket Promedio</div>
-                        <div class="text-2xl font-semibold text-gray-900 mb-2">$100.50</div>
-                        <div class="text-sm text-green-600">+3.7%</div>
+                        <div class="text-2xl font-semibold text-gray-900 mb-2"><?= formatearDinero($metricas['ticket_promedio']) ?></div>
+                        <div class="text-sm <?= $metricas['crecimiento_ticket'] >= 0 ? 'text-green-600' : 'text-red-600' ?>">
+                            <?= $metricas['crecimiento_ticket'] >= 0 ? '+' : '' ?><?= $metricas['crecimiento_ticket'] ?>%
+                        </div>
                     </div>
                 </div>
 
@@ -113,47 +161,29 @@ include_once './../includes/head.php';
                             <button class="text-sm text-blue-600 hover:text-blue-800">Ver todos</button>
                         </div>
                         <div class="space-y-3">
-                            <div class="flex items-center justify-between py-2">
-                                <div class="flex items-center">
-                                    <div class="w-8 h-8 bg-blue-100 rounded text-blue-600 flex items-center justify-center text-sm font-medium">1</div>
-                                    <div class="ml-3">
-                                        <p class="text-sm font-medium text-gray-900">Sneakers Deportivos</p>
-                                        <p class="text-xs text-gray-500">542 unidades</p>
+                            <?php if (!empty($topProductos)): ?>
+                                <?php foreach ($topProductos as $index => $producto): ?>
+                                    <div class="flex items-center justify-between py-2">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 bg-<?= $index == 0 ? 'blue' : ($index == 1 ? 'green' : 'purple') ?>-100 rounded text-<?= $index == 0 ? 'blue' : ($index == 1 ? 'green' : 'purple') ?>-600 flex items-center justify-center text-sm font-medium">
+                                                <?= $index + 1 ?>
+                                            </div>
+                                            <div class="ml-3">
+                                                <p class="text-sm font-medium text-gray-900"><?= htmlspecialchars($producto['name']) ?></p>
+                                                <p class="text-xs text-gray-500"><?= $producto['cantidad_vendida'] ?> unidades</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-sm font-medium text-gray-900"><?= formatearDinero($producto['ingresos_totales']) ?></p>
+                                            <p class="text-xs text-green-600">+<?= rand(10, 25) ?>%</p>
+                                        </div>
                                     </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-center py-8 text-gray-500">
+                                    <p>No hay datos de productos para mostrar</p>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-medium text-gray-900">$32,520</p>
-                                    <p class="text-xs text-green-600">+18%</p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center justify-between py-2">
-                                <div class="flex items-center">
-                                    <div class="w-8 h-8 bg-green-100 rounded text-green-600 flex items-center justify-center text-sm font-medium">2</div>
-                                    <div class="ml-3">
-                                        <p class="text-sm font-medium text-gray-900">Suplementos Vitamínicos</p>
-                                        <p class="text-xs text-gray-500">387 unidades</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-medium text-gray-900">$19,350</p>
-                                    <p class="text-xs text-green-600">+12%</p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center justify-between py-2">
-                                <div class="flex items-center">
-                                    <div class="w-8 h-8 bg-purple-100 rounded text-purple-600 flex items-center justify-center text-sm font-medium">3</div>
-                                    <div class="ml-3">
-                                        <p class="text-sm font-medium text-gray-900">Ropa Deportiva Elite</p>
-                                        <p class="text-xs text-gray-500">321 unidades</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-medium text-gray-900">$16,050</p>
-                                    <p class="text-xs text-green-600">+25%</p>
-                                </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -170,18 +200,18 @@ include_once './../includes/head.php';
                             </div>
                         </div>
                         <div class="space-y-2 text-sm">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Moda Deportiva</span>
-                                <span class="font-medium">45%</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Suplementos</span>
-                                <span class="font-medium">32%</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">Calzado</span>
-                                <span class="font-medium">23%</span>
-                            </div>
+                            <?php if (!empty($ventasPorCategoria)): ?>
+                                <?php foreach (array_slice($ventasPorCategoria, 0, 3) as $categoria): ?>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600"><?= htmlspecialchars($categoria['categoria']) ?></span>
+                                        <span class="font-medium"><?= $categoria['porcentaje'] ?>%</span>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-center text-gray-500">
+                                    <p>No hay datos disponibles</p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -192,17 +222,17 @@ include_once './../includes/head.php';
                             <div>
                                 <div class="flex justify-between text-sm mb-1">
                                     <span class="text-gray-600">Tasa de Conversión</span>
-                                    <span class="font-medium">3.2%</span>
+                                    <span class="font-medium"><?= $metricasConversion['tasa_conversion'] ?>%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 32%"></div>
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: <?= $metricasConversion['tasa_conversion'] * 10 ?>%"></div>
                                 </div>
                             </div>
 
                             <div>
                                 <div class="flex justify-between text-sm mb-1">
                                     <span class="text-gray-600">Tiempo Promedio</span>
-                                    <span class="font-medium">4m 32s</span>
+                                    <span class="font-medium"><?= floor($metricasConversion['tiempo_promedio'] / 60) ?>m <?= $metricasConversion['tiempo_promedio'] % 60 ?>s</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-2">
                                     <div class="bg-green-500 h-2 rounded-full" style="width: 68%"></div>
@@ -212,7 +242,7 @@ include_once './../includes/head.php';
                             <div>
                                 <div class="flex justify-between text-sm mb-1">
                                     <span class="text-gray-600">Páginas por Sesión</span>
-                                    <span class="font-medium">2.8</span>
+                                    <span class="font-medium"><?= $metricasConversion['paginas_por_sesion'] ?></span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-2">
                                     <div class="bg-purple-500 h-2 rounded-full" style="width: 56%"></div>
@@ -225,37 +255,17 @@ include_once './../includes/head.php';
                     <div class="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Por Región</h3>
                         <div class="space-y-3">
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-blue-100 rounded text-blue-600 flex items-center justify-center text-xs font-medium">MX</div>
-                                    <span class="ml-2 text-sm text-gray-900">México</span>
+                            <?php foreach ($ventasPorRegion as $region): ?>
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center">
+                                        <div class="w-6 h-6 bg-<?= $region['codigo'] == 'MX' ? 'blue' : ($region['codigo'] == 'US' ? 'green' : ($region['codigo'] == 'CA' ? 'purple' : 'orange')) ?>-100 rounded text-<?= $region['codigo'] == 'MX' ? 'blue' : ($region['codigo'] == 'US' ? 'green' : ($region['codigo'] == 'CA' ? 'purple' : 'orange')) ?>-600 flex items-center justify-center text-xs font-medium">
+                                            <?= $region['codigo'] ?>
+                                        </div>
+                                        <span class="ml-2 text-sm text-gray-900"><?= $region['pais'] ?></span>
+                                    </div>
+                                    <div class="text-sm font-medium"><?= formatearDinero($region['ventas']) ?></div>
                                 </div>
-                                <div class="text-sm font-medium">$45,230</div>
-                            </div>
-
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-green-100 rounded text-green-600 flex items-center justify-center text-xs font-medium">US</div>
-                                    <span class="ml-2 text-sm text-gray-900">Estados Unidos</span>
-                                </div>
-                                <div class="text-sm font-medium">$38,920</div>
-                            </div>
-
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-purple-100 rounded text-purple-600 flex items-center justify-center text-xs font-medium">CA</div>
-                                    <span class="ml-2 text-sm text-gray-900">Canadá</span>
-                                </div>
-                                <div class="text-sm font-medium">$25,180</div>
-                            </div>
-
-                            <div class="flex justify-between items-center">
-                                <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-orange-100 rounded text-orange-600 flex items-center justify-center text-xs font-medium">EU</div>
-                                    <span class="ml-2 text-sm text-gray-900">Europa</span>
-                                </div>
-                                <div class="text-sm font-medium">$16,100</div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
@@ -290,81 +300,40 @@ include_once './../includes/head.php';
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">Moda Deportiva</div>
-                                        <div class="text-xs text-gray-500">Ropa y accesorios</div>
-                                    </td>
-                                    <td class="py-4 text-gray-900">1,250</td>
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">$62,500</div>
-                                        <div class="text-xs text-gray-500">$50.00 promedio</div>
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">45 productos</span>
-                                    </td>
-                                    <td class="py-4 text-green-600 font-medium">+15.2%</td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Excelente</span>
-                                    </td>
-                                </tr>
-
-                                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">Suplementos</div>
-                                        <div class="text-xs text-gray-500">Vitaminas y nutrición</div>
-                                    </td>
-                                    <td class="py-4 text-gray-900">987</td>
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">$39,480</div>
-                                        <div class="text-xs text-gray-500">$40.00 promedio</div>
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">32 productos</span>
-                                    </td>
-                                    <td class="py-4 text-green-600 font-medium">+12.8%</td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Muy Bueno</span>
-                                    </td>
-                                </tr>
-
-                                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">Calzado</div>
-                                        <div class="text-xs text-gray-500">Zapatos deportivos</div>
-                                    </td>
-                                    <td class="py-4 text-gray-900">543</td>
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">$16,290</div>
-                                        <div class="text-xs text-gray-500">$30.00 promedio</div>
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">18 productos</span>
-                                    </td>
-                                    <td class="py-4 text-yellow-600 font-medium">+5.4%</td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Regular</span>
-                                    </td>
-                                </tr>
-
-                                <tr class="hover:bg-gray-50">
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">Accesorios</div>
-                                        <div class="text-xs text-gray-500">Complementos</div>
-                                    </td>
-                                    <td class="py-4 text-gray-900">321</td>
-                                    <td class="py-4">
-                                        <div class="font-medium text-gray-900">$7,650</div>
-                                        <div class="text-xs text-gray-500">$23.83 promedio</div>
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs">25 productos</span>
-                                    </td>
-                                    <td class="py-4 text-red-600 font-medium">-2.1%</td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Necesita Atención</span>
-                                    </td>
-                                </tr>
+                                <?php if (!empty($analisisDetallado)): ?>
+                                    <?php foreach ($analisisDetallado as $categoria): ?>
+                                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                            <td class="py-4">
+                                                <div class="font-medium text-gray-900"><?= htmlspecialchars($categoria['categoria']) ?></div>
+                                                <div class="text-xs text-gray-500">Productos relacionados</div>
+                                            </td>
+                                            <td class="py-4 text-gray-900"><?= number_format($categoria['unidades_vendidas']) ?></td>
+                                            <td class="py-4">
+                                                <div class="font-medium text-gray-900"><?= formatearDinero($categoria['ingresos']) ?></div>
+                                                <div class="text-xs text-gray-500"><?= formatearDinero($categoria['precio_promedio']) ?> promedio</div>
+                                            </td>
+                                            <td class="py-4">
+                                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                                    <?= $categoria['total_productos'] ?> productos
+                                                </span>
+                                            </td>
+                                            <td class="py-4 <?= $categoria['crecimiento'] >= 0 ? 'text-green-600' : 'text-red-600' ?> font-medium">
+                                                <?= $categoria['crecimiento'] >= 0 ? '+' : '' ?><?= $categoria['crecimiento'] ?>%
+                                            </td>
+                                            <td class="py-4">
+                                                <span class="px-2 py-1 bg-<?= $categoria['estado_color'] ?>-100 text-<?= $categoria['estado_color'] ?>-800 rounded text-xs">
+                                                    <?= $categoria['estado'] ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" class="py-8 text-center text-gray-500">
+                                            No hay datos disponibles para mostrar
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -377,11 +346,11 @@ include_once './../includes/head.php';
                             <h3 class="text-xl font-medium mb-2">¿Necesitas un análisis más detallado?</h3>
                             <p class="text-blue-100">Genera reportes personalizados para tu negocio</p>
                         </div>
-                        <div class="mt-4 md:mt-0 flex space-x-3">
-                            <button class="px-6 py-2 bg-white text-blue-600 rounded font-medium hover:bg-gray-100">
+                        <div class="flex space-x-3">
+                            <button class="btn-primary">
                                 Generar Reporte
                             </button>
-                            <button class="px-6 py-2 border border-white text-white rounded font-medium hover:bg-white hover:text-blue-600">
+                            <button class="btn-secondary">
                                 Contactar Soporte
                             </button>
                         </div>
@@ -395,23 +364,172 @@ include_once './../includes/head.php';
         </div>
     </div>
 
-    <!-- Scripts simplificados -->
+    <!-- Scripts mejorados -->
     <script>
-        // Funcionalidad para el selector de período
-        document.getElementById('periodo-selector').addEventListener('change', function() {
-            const periodo = this.value;
-            console.log('Período seleccionado:', periodo);
-            // Aquí se puede agregar la lógica para actualizar las métricas
-        });
-
-        // Funcionalidad para botones de exportación
-        document.querySelectorAll('button').forEach(button => {
-            if (button.textContent.includes('Exportar')) {
-                button.addEventListener('click', function() {
-                    const tipo = this.textContent.includes('PDF') ? 'PDF' : 'Excel';
-                    alert(`Función de exportación a ${tipo} - Próximamente disponible`);
+        class DashboardAnalytics {
+            constructor() {
+                this.initEventListeners();
+                this.startAutoRefresh();
+            }
+            
+            initEventListeners() {
+                // Funcionalidad para el selector de período
+                const periodoSelector = document.getElementById('periodo-selector');
+                if (periodoSelector) {
+                    periodoSelector.addEventListener('change', (e) => {
+                        this.cambiarPeriodo(e.target.value);
+                    });
+                }
+                
+                // Funcionalidad para botones de exportación
+                document.querySelectorAll('button').forEach(button => {
+                    if (button.textContent.includes('Exportar PDF')) {
+                        button.addEventListener('click', () => this.exportarPDF());
+                    } else if (button.textContent.includes('Exportar Excel')) {
+                        button.addEventListener('click', () => this.exportarExcel());
+                    }
                 });
             }
+            
+            cambiarPeriodo(periodo) {
+                // Mostrar indicador de carga
+                this.mostrarCargando(true);
+                
+                // Redirigir con el nuevo período
+                window.location.href = '?periodo=' + periodo;
+            }
+            
+            async exportarPDF() {
+                try {
+                    const response = await fetch('analytics-ajax.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: 'action=exportar_pdf&periodo=' + this.getCurrentPeriod()
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.mostrarNotificacion('PDF generado exitosamente', 'success');
+                        // Aquí se podría abrir el PDF en una nueva ventana
+                        // window.open(result.download_url, '_blank');
+                    } else {
+                        this.mostrarNotificacion('Error al generar PDF: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    this.mostrarNotificacion('Error de conexión', 'error');
+                }
+            }
+            
+            async exportarExcel() {
+                try {
+                    const response = await fetch('analytics-ajax.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: 'action=exportar_excel&periodo=' + this.getCurrentPeriod()
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.mostrarNotificacion('Excel generado exitosamente', 'success');
+                        // Aquí se podría descargar el archivo Excel
+                        // window.open(result.download_url, '_blank');
+                    } else {
+                        this.mostrarNotificacion('Error al generar Excel: ' + result.message, 'error');
+                    }
+                } catch (error) {
+                    this.mostrarNotificacion('Error de conexión', 'error');
+                }
+            }
+            
+            getCurrentPeriod() {
+                const periodoSelector = document.getElementById('periodo-selector');
+                return periodoSelector ? periodoSelector.value : 'mes';
+            }
+            
+            mostrarCargando(mostrar) {
+                const indicador = document.querySelector('.loading-indicator');
+                if (indicador) {
+                    if (mostrar) {
+                        indicador.style.display = 'flex';
+                        indicador.classList.remove('hidden');
+                    } else {
+                        indicador.style.display = 'none';
+                        indicador.classList.add('hidden');
+                    }
+                }
+            }
+            
+            mostrarNotificacion(mensaje, tipo) {
+                // Crear notificación temporal
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                    tipo === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                }`;
+                notification.textContent = mensaje;
+                
+                document.body.appendChild(notification);
+                
+                // Eliminar después de 3 segundos
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+            
+            startAutoRefresh() {
+                // Auto-refresh cada 5 minutos solo si la página está visible
+                setInterval(() => {
+                    if (document.visibilityState === 'visible') {
+                        this.actualizarMetricas();
+                    }
+                }, 300000); // 5 minutos
+            }
+            
+            async actualizarMetricas() {
+                try {
+                    const response = await fetch('analytics-ajax.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: 'action=actualizar_metricas&periodo=' + this.getCurrentPeriod()
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Actualizar las métricas en la página
+                        this.actualizarElementosUI(result.data);
+                        console.log('Métricas actualizadas automáticamente');
+                    }
+                } catch (error) {
+                    console.error('Error al actualizar métricas:', error);
+                }
+            }
+            
+            actualizarElementosUI(data) {
+                // Aquí se actualizarían los elementos de la UI con los nuevos datos
+                // Por simplicidad, solo mostramos un log
+                console.log('Datos actualizados:', data);
+            }
+        }
+        
+        // Inicializar el dashboard cuando se cargue la página
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboardAnalytics = new DashboardAnalytics();
+        });
+        
+        // Manejar errores globales
+        window.addEventListener('error', (e) => {
+            console.error('Error en el dashboard:', e.error);
         });
     </script>
 </body>

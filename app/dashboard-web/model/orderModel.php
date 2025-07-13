@@ -28,6 +28,7 @@ class OrderModel
                 o.status,
                 o.created_at,
                 o.discount_amount,
+                o.created_by,
                 c.name AS client_name,
                 c.email AS client_email,
                 c.phone AS client_phone,
@@ -42,6 +43,12 @@ class OrderModel
                 p.paid_at,
                 u.username AS created_by_username,
                 u.email AS created_by_email,
+                -- Determinar el origen de la orden
+                CASE 
+                    WHEN o.created_by IS NULL THEN 'WEB'
+                    WHEN o.created_by IS NOT NULL THEN 'DASHBOARD'
+                    ELSE 'UNKNOWN'
+                END AS order_source,
                 COUNT(DISTINCT oi.product_id) AS total_items,
                 SUM(oi.quantity) AS total_quantity
             FROM {$this->table} o

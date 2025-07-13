@@ -100,6 +100,15 @@ class ProductModel
             $params[':status'] = $filters['status'];
         }
 
+        // Procesar filtros personalizados para categorías y subcategorías por ID
+        if (!empty($filters['_custom_category_filter'])) {
+            $conditions[] = $filters['_custom_category_filter'];
+        }
+        
+        if (!empty($filters['_custom_subcategory_filter'])) {
+            $conditions[] = $filters['_custom_subcategory_filter'];
+        }
+        
         // Agregar condiciones al SQL
         if (!empty($conditions)) {
             $sql .= " AND " . implode(" AND ", $conditions);
@@ -188,6 +197,15 @@ class ProductModel
             $params[':status'] = $filters['status'];
         }
 
+        // Procesar filtros personalizados para categorías y subcategorías por ID
+        if (!empty($filters['_custom_category_filter'])) {
+            $conditions[] = $filters['_custom_category_filter'];
+        }
+        
+        if (!empty($filters['_custom_subcategory_filter'])) {
+            $conditions[] = $filters['_custom_subcategory_filter'];
+        }
+        
         // Agregar condiciones WHERE si existen
         if (!empty($conditions)) {
             $sql .= " WHERE " . implode(" AND ", $conditions);
@@ -198,9 +216,17 @@ class ProductModel
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
         }
-
+        
         $stmt->execute();
         return $stmt->fetchColumn();
+    }
+
+    /**
+     * Alias de count para mantener compatibilidad con el API
+     */
+    public function getTotalCount($search = '', $filters = [])
+    {
+        return $this->count($search, $filters);
     }
 
     /**
@@ -270,7 +296,11 @@ class ProductModel
         // Obtener imágenes
         $imgStmt = $this->pdo->prepare("SELECT image_url FROM product_images WHERE product_id = :id");
         $imgStmt->execute(['id' => $id]);
-        $product['images'] = $imgStmt->fetchAll(PDO::FETCH_COLUMN);
+        $images = $imgStmt->fetchAll(PDO::FETCH_COLUMN);
+        $product['images'] = $images;
+
+        // Asignar la primera imagen como main_image si está disponible
+        $product['main_image'] = $images[0] ?? null;
     }
 
     return $product;
