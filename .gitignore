@@ -21,6 +21,7 @@ package-lock.json
 # Database configuration
 config/database.php
 config/config.local.php
+db/
 
 # Logs
 logs/
