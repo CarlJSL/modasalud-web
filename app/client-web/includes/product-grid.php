@@ -59,7 +59,7 @@ $products = $productModel->getAll(20, 0, $search, $filters);
       if (count($products) === 1) echo 'grid-cols-1';
       elseif (count($products) === 2) echo 'grid-cols-1 sm:grid-cols-2';
       elseif (count($products) === 3) echo 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3';
-      else echo 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+      else echo 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
     ?> gap-8 flex-1">
       <?php foreach ($products as $product): ?>
         <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl hover:border-pink-400 border-2 border-transparent transition flex flex-col w-full p-0 min-h-[400px] max-w-xs mx-auto max-h-[400px] h-[480px]">
