@@ -70,16 +70,16 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 ?><!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carrito de compras | ModaSalud</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-50 font-sans">
 <?php include 'includes/header.php'; ?>
 <main class="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-  <!-- Carrito -->
+                <!-- Carrito -->
   <section class="lg:col-span-2 bg-white rounded-xl shadow p-6 flex flex-col">
     <h2 class="text-3xl font-bold text-purple-700 mb-6">Carro (<span id="cart-count"><?= array_sum(array_column($cart_items, 'quantity')) ?></span> productos)</h2>
     <?php if (empty($cart_items)): ?>
@@ -87,7 +87,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
         <p class="text-lg text-gray-500 mb-2">Tu carrito está vacío.</p>
         <a href="index.php" class="mt-2 px-6 py-2 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 transition">Ver productos</a>
-      </div>
+                </div>
     <?php else: ?>
       <div id="cart-items">
         <?php foreach ($cart_items as $item): ?>
@@ -104,7 +104,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             <div class="text-sm text-gray-500">
               Stock disponible: <span class="stock-display"><?= $item['stock'] ?></span>
             </div>
-          </div>
+        </div>
           <div class="flex items-center gap-2">
             <button onclick="updateQuantity(<?= $item['product_id'] ?>, -1)" class="bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center">
               <i class="fas fa-minus text-sm"></i>
@@ -121,18 +121,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
             <button onclick="removeItem(<?= $item['product_id'] ?>)" class="text-rose-500 hover:text-rose-700 text-xl ml-4">
               <i class="fas fa-trash"></i>
             </button>
-          </div>
-        </div>
+                            </div>
+                        </div>
         <?php endforeach; ?>
-      </div>
+                    </div>
       <div class="flex justify-between items-center mt-6">
         <button onclick="clearCart()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold">
           Vaciar carrito
         </button>
         <button onclick="location.reload()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold">
           Actualizar
-        </button>
-      </div>
+                    </button>
+                </div>
     <?php endif; ?>
   </section>
   
@@ -143,16 +143,16 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
       <div class="flex justify-between"><span>Subtotal</span><span id="subtotal">S/ <?= number_format($subtotal, 2) ?></span></div>
       <div class="flex justify-between text-green-600"><span>Descuentos</span><span>- S/ <?= number_format($descuento, 2) ?></span></div>
       <div class="flex justify-between font-bold text-lg text-pink-600 border-t pt-2"><span>Total a pagar</span><span id="total">S/ <?= number_format($total, 2) ?></span></div>
-    </div>
+                            </div>
     <div class="flex flex-col gap-2 mt-4">
       <span class="text-xs text-gray-400">Paga con:</span>
       <div class="flex gap-3">
         <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-semibold">Yape</span>
         <span class="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-semibold">Plin</span>
         <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">Tarjeta</span>
-      </div>
-    </div>
-    <button class="mt-6 bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white text-lg font-bold py-3 rounded-xl shadow-lg transition">
+                            </div>
+                        </div>
+    <button onclick="window.location.href='checkout.php'" class="mt-6 bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white text-lg font-bold py-3 rounded-xl shadow-lg transition">
       Continuar compra
     </button>
   </aside>
@@ -179,9 +179,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         <?php if (rand(0, 10) > 7): ?>
           <span class="absolute top-2 left-2 bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded">¡Nuevo!</span>
         <?php endif; ?>
-      </div>
+                            </div>
     <?php endforeach; ?>
-  </div>
+                        </div>
 </section>
 
 <?php include 'includes/footer.php'; ?>
@@ -193,10 +193,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
   <div class="flex justify-center gap-4">
     <button id="confirm-modal-cancel" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold">Cancelar</button>
     <button id="confirm-modal-accept" class="px-4 py-2 rounded bg-red-500 hover:bg-red-600 text-white font-semibold">Sí, eliminar</button>
-  </div>
-</div>
-
-<script>
+                        </div>
+                    </div>
+                    
+    <script>
 // Funciones para manejar el carrito
 async function updateQuantity(productId, change, newValue = null) {
     const cartItem = document.querySelector(`[data-product-id="${productId}"]`);
@@ -214,9 +214,9 @@ async function updateQuantity(productId, change, newValue = null) {
     if (quantity < 1) quantity = 1;
     if (quantity > maxStock) {
         showNotification('Stock insuficiente', 'error');
-        return;
-    }
-    
+                return;
+            }
+            
     try {
         const response = await fetch('cart-ajax.php', {
             method: 'POST',
@@ -465,9 +465,9 @@ function showNotification(message, type = 'info') {
 }
 
 // Inicializar totales al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {
     updateTotals();
-});
-</script>
+        });
+    </script>
 </body>
 </html>

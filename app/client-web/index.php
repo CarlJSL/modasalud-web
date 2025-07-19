@@ -37,7 +37,7 @@ session_start();
             const originalText = loadingBtn.textContent;
             
             loadingBtn.disabled = true;
-            loadingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+            loadingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
             
             try {
                 const response = await fetch('cart-ajax.php', {
@@ -50,7 +50,7 @@ session_start();
                 
                 const data = await response.json();
                 
-                if (data.success) {
+            if (data.success) {
                     showNotification(data.message, 'success');
                     loadingBtn.innerHTML = '<i class="fas fa-check"></i>';
                     loadingBtn.classList.remove('bg-purple-600', 'hover:bg-purple-700');
@@ -109,7 +109,7 @@ session_start();
                     if (data.count > 0) {
                         if (cartBadge) {
                             cartBadge.textContent = data.count;
-                        } else {
+                } else {
                             // Crear el badge si no existe
                             const cartLink = document.querySelector('.fas.fa-shopping-cart').parentElement;
                             const badge = document.createElement('span');
@@ -117,7 +117,7 @@ session_start();
                             badge.textContent = data.count;
                             cartLink.appendChild(badge);
                         }
-                    } else {
+                } else {
                         if (cartBadge) {
                             cartBadge.remove();
                         }
@@ -127,6 +127,6 @@ session_start();
                 console.error('Error updating cart counter:', error);
             }
         }
-    </script>
+</script>
 </body>
 </html>
