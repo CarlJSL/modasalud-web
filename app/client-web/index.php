@@ -37,7 +37,7 @@ session_start();
             const originalText = loadingBtn.textContent;
             
             loadingBtn.disabled = true;
-            loadingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+            loadingBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
             try {
                 const response = await fetch('cart-ajax.php', {

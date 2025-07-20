@@ -341,6 +341,12 @@ class OrderModel
                     $itemStmt->bindValue(':quantity', $item['quantity'], PDO::PARAM_INT);
                     $itemStmt->bindValue(':price', $item['price']);
                     $itemStmt->execute();
+                    // Actualizar stock del producto
+                    $updateStockSql = "UPDATE products SET stock = stock - :quantity WHERE id = :product_id AND stock >= :quantity";
+                    $updateStockStmt = $this->pdo->prepare($updateStockSql);
+                    $updateStockStmt->bindValue(':quantity', $item['quantity'], PDO::PARAM_INT);
+                    $updateStockStmt->bindValue(':product_id', $item['product_id'], PDO::PARAM_INT);
+                    $updateStockStmt->execute();
                 }
             }
 
@@ -443,6 +449,13 @@ class OrderModel
                     ':quantity'   => $item['quantity'],
                     ':price'      => $item['price'],
                 ]);
+                // Actualizar stock del producto
+                $updateStockSql = "UPDATE products SET stock = stock - :quantity WHERE id = :product_id AND stock >= :quantity";
+                $updateStockStmt = $this->pdo->prepare($updateStockSql);
+                $updateStockStmt->execute([
+                    ':quantity' => $item['quantity'],
+                    ':product_id' => $item['product_id']
+                ]);
             }
         }
 
@@ -531,6 +544,24 @@ class OrderModel
      */
     public function updateStatus(int $id, string $status)
     {
+        // Si se cancela la orden, devolver el stock de los productos
+        if ($status === 'CANCELLED') {
+            // Obtener los items de la orden
+            $itemSql = "SELECT product_id, quantity FROM order_items WHERE order_id = :order_id";
+            $itemStmt = $this->pdo->prepare($itemSql);
+            $itemStmt->bindValue(':order_id', $id, PDO::PARAM_INT);
+            $itemStmt->execute();
+            $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Sumar el stock de cada producto
+            foreach ($items as $item) {
+                $updateStockSql = "UPDATE products SET stock = stock + :quantity WHERE id = :product_id";
+                $updateStockStmt = $this->pdo->prepare($updateStockSql);
+                $updateStockStmt->bindValue(':quantity', $item['quantity'], PDO::PARAM_INT);
+                $updateStockStmt->bindValue(':product_id', $item['product_id'], PDO::PARAM_INT);
+                $updateStockStmt->execute();
+            }
+        }
         $sql = "UPDATE {$this->table} SET status = :status WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':status', $status);

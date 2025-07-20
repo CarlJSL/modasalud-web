@@ -152,8 +152,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
         <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">Tarjeta</span>
                             </div>
                         </div>
-    <button onclick="window.location.href='checkout.php'" class="mt-6 bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white text-lg font-bold py-3 rounded-xl shadow-lg transition">
-      Continuar compra
+        <button class="mt-6 bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 hover:from-purple-700 hover:to-rose-600 text-white text-lg font-bold py-3 rounded-xl shadow-lg transition" onclick="proceedToCheckout()">
+      Proceder al checkout
     </button>
   </aside>
 </main>
@@ -187,7 +187,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
 <?php include 'includes/footer.php'; ?>
 
 <!-- Modal de confirmación flotante mejorado -->
-<div id="confirm-modal-overlay" class="fixed inset-0 z-50 bg-opacity-90 hidden"></div>
+<div id="confirm-modal-overlay" class="fixed inset-0 z-50 backdrop-blur-sm hidden"></div>
 <div id="confirm-modal" class="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-6 max-w-xs w-full text-center border border-gray-200 hidden">
   <div id="confirm-modal-message" class="mb-4 text-gray-800 text-lg font-semibold"></div>
   <div class="flex justify-center gap-4">
@@ -386,24 +386,10 @@ async function addToCart(productId, quantity = 1) {
         
         if (data.success) {
             showNotification(data.message, 'success');
-            const btnAdd = document.querySelector(`[data-product-id="${productId}"]`);
-            if (btnAdd) {
-                btnAdd.innerHTML = '<i class="fas fa-check"></i>';
-                btnAdd.classList.remove('bg-purple-600', 'hover:bg-purple-700');
-                btnAdd.classList.add('bg-green-500', 'hover:bg-green-600');
-            }
-            updateCartCount();
-            // Recargar productos del carrito y totales sin recargar la página
-            await refreshCartItems();
-            // Restaurar el icono original después de refrescar el carrito
+            // Recargar la página para evitar duplicados y refrescar todo
             setTimeout(() => {
-                const btn = document.querySelector(`[data-product-id="${productId}"]`);
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-cart-plus"></i>';
-                    btn.classList.remove('bg-green-500', 'hover:bg-green-600');
-                    btn.classList.add('bg-purple-600', 'hover:bg-purple-700');
-                }
-            }, 1500);
+                location.reload();
+            }, 600);
         } else {
             showNotification(data.message, 'error');
         }
@@ -411,6 +397,41 @@ async function addToCart(productId, quantity = 1) {
         showNotification('Error de conexión', 'error');
         console.error('Error en addToCart:', error);
     }
+}
+
+
+// Inicializa los listeners en los elementos del carrito después de refrescar
+function initCartEvents() {
+    document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const productId = this.closest('.cart-item').getAttribute('data-product-id');
+            toggleSelection(productId, this.checked);
+        });
+    });
+    document.querySelectorAll('.item-qty').forEach(input => {
+        input.addEventListener('change', function() {
+            const productId = this.closest('.cart-item').getAttribute('data-product-id');
+            updateQuantity(productId, 0, this.value);
+        });
+    });
+    document.querySelectorAll('.cart-item .fa-minus').forEach(btn => {
+        btn.parentElement.addEventListener('click', function() {
+            const productId = this.closest('.cart-item').getAttribute('data-product-id');
+            updateQuantity(productId, -1);
+        });
+    });
+    document.querySelectorAll('.cart-item .fa-plus').forEach(btn => {
+        btn.parentElement.addEventListener('click', function() {
+            const productId = this.closest('.cart-item').getAttribute('data-product-id');
+            updateQuantity(productId, 1);
+        });
+    });
+    document.querySelectorAll('.cart-item .fa-trash').forEach(btn => {
+        btn.parentElement.addEventListener('click', function() {
+            const productId = this.closest('.cart-item').getAttribute('data-product-id');
+            removeItem(productId);
+        });
+    });
 }
 
 // Refresca el bloque de productos del carrito y los totales
@@ -435,6 +456,7 @@ async function refreshCartItems() {
         }
         updateTotals();
         updateCartCount();
+        initCartEvents();
     } catch (error) {
         console.error('Error actualizando carrito:', error);
     }
@@ -464,10 +486,24 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// Función para proceder al checkout
+function proceedToCheckout() {
+    // Verificar que haya productos seleccionados
+    const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+    if (selectedItems.length === 0) {
+        alert('Por favor selecciona al menos un producto para continuar');
+        return;
+    }
+    
+    // Redirigir al checkout
+    window.location.href = 'checkout.php';
+}
+
 // Inicializar totales al cargar la página
-        document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     updateTotals();
-        });
+    initCartEvents();
+});
     </script>
 </body>
 </html>
