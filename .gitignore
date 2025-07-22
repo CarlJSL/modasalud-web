@@ -108,3 +108,6 @@ documentation/
 
 config/company_config.example.php
 config/company_config.php
+
+app/dashboard-web/pdf/order_pdf_correo.php
+app/dashboard-web/pdf/orden_pdf_template.php
