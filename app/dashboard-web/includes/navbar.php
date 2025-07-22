@@ -102,16 +102,10 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
                     <div class="w-2 h-2 bg-purple-300 rounded-full mr-3"></div>
                     Ventas
                 </a>
-                <!--
-                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
-                    <div class="w-2 h-2 bg-purple-300 rounded-full mr-3"></div>
-                    Pagos
+                <a href="../orden/orderPendiente.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
+                    <div class="w-2 h-2 bg-indigo-400 rounded-full mr-3"></div>
+                    Órdenes Pendientes
                 </a>
-                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
-                    <div class="w-2 h-2 bg-purple-300 rounded-full mr-3"></div>
-                    Cupones
-                </a>
--->
             </div>
         </div>
 

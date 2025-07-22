@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     echo json_encode(['success' => false, 'message' => 'Datos incompletos para crear orden']);
                     exit;
                 }
-                
+
                 if ($_POST['is_new_client'] == '1') {
                     $data = [
                         'client' => [
@@ -82,16 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     try {
                         $result = $model->createCompleteOrder($data);
                         echo json_encode([
-                            'success' => true, 
-                            'message' => 'Orden creada exitosamente', 
+                            'success' => true,
+                            'message' => 'Orden creada exitosamente',
                             'order_id' => $result,
                             'pdf_url' => '../pdf/orden_pdf.php?id=' . $result
                         ]);
                     } catch (Exception $e) {
                         error_log('Error al crear orden: ' . $e->getMessage());
                         echo json_encode([
-                            'success' => false, 
-                            'message' => 'Error al crear orden: ' . $e->getMessage(), 
+                            'success' => false,
+                            'message' => 'Error al crear orden: ' . $e->getMessage(),
                             'error' => $e->getMessage(),
                             'debug_data' => $data // Para debugging
                         ]);
@@ -128,8 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
 
                     $result = $model->create($data);
                     echo json_encode([
-                        'success' => true, 
-                        'message' => 'Orden creada exitosamente', 
+                        'success' => true,
+                        'message' => 'Orden creada exitosamente',
                         'order_id' => $result,
                         'pdf_url' => '../pdf/orden_pdf.php?id=' . $result
                     ]);
@@ -178,8 +178,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
             case 'update_status':
                 $id = (int)($_POST['id'] ?? $_GET['id']);
                 $status = $_POST['status'] ?? $_GET['status'];
+                $extraData = isset($_POST['extraData']) ? json_decode($_POST['extraData'], true) : [];
 
-                $result = $model->updateStatus($id, $status);
+                $result = $model->updateStatus($id, $status, $extraData);
                 $statusNames = [
                     'PENDING' => 'Pendiente',
                     'COMPLETED' => 'Completada',
@@ -573,7 +574,7 @@ include_once './../includes/head.php';
                                             </td>
                                             <td class="px-3 py-2 text-sm text-gray-900">
                                                 <div>
-                                                    <?php 
+                                                    <?php
                                                     $orderSource = $order['order_source'] ?? ($order['created_by'] ? 'DASHBOARD' : 'WEB');
                                                     if ($orderSource === 'WEB'): ?>
                                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -601,13 +602,14 @@ include_once './../includes/head.php';
                                                         title="Ver detalles">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
-                                                    
-                                                    <button onclick="window.open('../pdf/orden_pdf.php?id=<?= $order['id'] ?>', '_blank')"
-                                                        class="text-purple-600 hover:text-purple-900 text-xs p-1"
-                                                        title="Ver PDF">
-                                                        <i class="fas fa-file-pdf"></i>
-                                                    </button>
-                                                    
+                                                    <?php if ($order['status'] === 'COMPLETED') : ?>
+                                                        <button onclick="window.open('../pdf/orden_pdf.php?id=<?= $order['id'] ?>', '_blank')"
+                                                            class="text-purple-600 hover:text-purple-900 text-xs p-1"
+                                                            title="Ver PDF">
+                                                            <i class="fas fa-file-pdf"></i>
+                                                        </button>
+                                                    <?php endif; ?>
+
                                                     <?php if ($order['status'] != 'COMPLETED' && $order['status'] != 'CANCELLED'): ?>
                                                         <button onclick="openEditModal(<?= $order['id'] ?>)"
                                                             class="text-green-600 hover:text-green-900 text-xs p-1"
@@ -615,21 +617,25 @@ include_once './../includes/head.php';
                                                             <i class="fas fa-edit"></i>
                                                         </button>
                                                     <?php endif; ?>
+                                                    <?php if ($order['status'] === 'PENDING' && $order['payment_status'] != 'PENDING'): ?>
 
 
-                                                    <?php if ($order['status'] === 'PENDING'): ?>
-                                                        <button
-                                                            onclick="openOrderStatusModal(<?= $order['id'] ?>, 'COMPLETED')"
-                                                            class="text-green-600 hover:text-green-900 text-xs p-1"
-                                                            title="Marcar como completada">
-                                                            <i class="fas fa-check"></i>
-                                                        </button>
-                                                        <button
-                                                            onclick="openOrderStatusModal(<?= $order['id'] ?>, 'CANCELLED')"
-                                                            class="text-red-600 hover:text-red-900 text-xs p-1"
-                                                            title="Cancelar orden">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
+                                                        <?php if ($order['payment_status'] === 'PAID'): ?>
+                                                            <button
+                                                                onclick="openOrderStatusModal(<?= $order['id'] ?>, 'COMPLETED')"
+                                                                class="text-green-600 hover:text-green-900 text-xs p-1"
+                                                                title="Marcar como completada">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                        <?php endif; ?>
+                                                        <?php if ($order['payment_status'] === 'FAILED'): ?>
+                                                            <button
+                                                                onclick="openOrderStatusModal(<?= $order['id'] ?>, 'CANCELLED')"
+                                                                class="text-red-600 hover:text-red-900 text-xs p-1"
+                                                                title="Cancelar orden">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        <?php endif; ?>
                                                     <?php endif; ?>
 
                                                 </div>

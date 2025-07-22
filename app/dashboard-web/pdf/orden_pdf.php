@@ -254,8 +254,8 @@ ob_start();
             <span class="info-label">Estado:</span>
             <span class="info-value">
                 <span class="status-badge status-<?= strtolower($order['status']) ?>">
-                    <?= $order['status'] == 'PENDING' ? 'Pendiente' : ($order['status'] == 'COMPLETED' ? 'Completada' : 'Cancelada') ?>
-                </span>
+                Completada
+            </span>
             </span>
         </div>
     </div>

@@ -1,3 +1,15 @@
+</div>
+
+<!-- Modal de carga para envío de correo -->
+<div id="orderStatusLoadingModal" class="fixed inset-0 bg-black bg-opacity-30 hidden z-[100] items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-xs animate-fadeIn flex flex-col items-center justify-center p-8">
+        <div class="mb-4">
+            <i class="fas fa-spinner fa-spin text-3xl text-blue-600"></i>
+        </div>
+        <div class="text-lg font-medium text-gray-800 mb-1">Enviando correo...</div>
+        <div class="text-sm text-gray-500">Por favor espera un momento</div>
+    </div>
+</div>
 <!-- Modal para Crear/Editar Orden -->
 <div id="orderModal" class="fixed inset-0 bg-black bg-opacity-15 hidden z-50 items-center justify-center p-4 modal-backdrop">
     <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fadeIn modal-content">
@@ -351,6 +363,45 @@
             </div>
             <input type="hidden" id="orderIdInput">
             <input type="hidden" id="orderNewStatusInput">
+            <!-- Campos adicionales para aceptar/cancelar -->
+            <div id="orderStatusExtraFields" class="mt-4 hidden">
+                <div id="acceptFields" class="space-y-3 hidden">
+                    <div class="flex flex-col items-center mb-2">
+                        <div class="w-full flex justify-center">
+                            <hr class="my-3 w-3/4 border-gray-300">
+                        </div>
+                        <div class="flex items-center justify-center">
+                            <input type="checkbox" id="orderEnvioLocalCheck" class="mr-2" onchange="toggleEnvioLocalFields(this)">
+                            <label for="orderEnvioLocalCheck" class="text-sm font-medium text-gray-700 select-none">Envío local (llevar producto a la dirección de la orden)</label>
+                        </div>
+                        <div class="w-full flex justify-center">
+                            <hr class="my-3 w-3/4 border-gray-300">
+                        </div>
+                    </div>
+                    <div class="envio-campo">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Empresa de transporte</label>
+                        <input type="text" id="orderEmpresaInput" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Nombre de la empresa">
+                    </div>
+                    <div class="envio-campo">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Link de seguimiento</label>
+                        <input type="text" id="orderLinkInput" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="URL de seguimiento">
+                    </div>
+                    <div class="envio-campo">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">N° de seguimiento</label>
+                        <input type="text" id="orderClaveInput" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="N° de seguimiento">
+                    </div>
+                    <div class="envio-campo">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Clave de Recojo</label>
+                        <input type="text" id="orderClaveRecojoInput" class="w-full border border-gray-300 rounded px-3 py-2" placeholder="Clave de Recojo">
+                    </div>
+                </div>
+                <div id="cancelFields" class="space-y-3 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Motivo de cancelación</label>
+                        <textarea id="orderMotivoInput" class="w-full border border-gray-300 rounded px-3 py-2" rows="2" placeholder="Motivo de la cancelación"></textarea>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
             <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50" onclick="closeModal('orderStatusModal')">
@@ -665,6 +716,7 @@
         quantityInput.value = 1;
     }
 
+
     function openOrderStatusModal(orderId, newStatus) {
         const modal = document.getElementById('orderStatusModal');
         const modalTitle = document.getElementById('orderModalTitle');
@@ -673,9 +725,20 @@
         const modalCircle = document.getElementById('orderModalCircle');
         const modalCircleIcon = document.getElementById('orderModalCircleIcon');
         const header = document.getElementById('orderModalHeader');
+        const extraFields = document.getElementById('orderStatusExtraFields');
+        const acceptFields = document.getElementById('acceptFields');
+        const cancelFields = document.getElementById('cancelFields');
 
         document.getElementById('orderIdInput').value = orderId;
         document.getElementById('orderNewStatusInput').value = newStatus;
+
+        // Reset fields
+        if (document.getElementById('orderClaveInput')) document.getElementById('orderClaveInput').value = '';
+        if (document.getElementById('orderEmpresaInput')) document.getElementById('orderEmpresaInput').value = '';
+        if (document.getElementById('orderLinkInput')) document.getElementById('orderLinkInput').value = '';
+        if (document.getElementById('orderClaveRecojoInput')) document.getElementById('orderClaveRecojoInput').value = '';
+        if (document.getElementById('orderMotivoInput')) document.getElementById('orderMotivoInput').value = '';
+        if (document.getElementById('orderEnvioLocalCheck')) document.getElementById('orderEnvioLocalCheck').checked = false;
 
         if (newStatus === 'COMPLETED') {
             modalTitle.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i> Confirmar finalización';
@@ -684,42 +747,154 @@
             modalCircle.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4';
             modalCircleIcon.className = 'fas fa-check text-green-600 text-xl';
             header.className = 'bg-gradient-to-r from-green-50 to-lime-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center';
-        } else {
+            extraFields.classList.remove('hidden');
+            acceptFields.classList.remove('hidden');
+            cancelFields.classList.add('hidden');
+            // Al abrir, ocultar campos si el check está activo
+            setTimeout(() => {
+                const check = document.getElementById('orderEnvioLocalCheck');
+                if (check) toggleEnvioLocalFields(check);
+            }, 50);
+        } else if (newStatus === 'CANCELLED') {
             modalTitle.innerHTML = '<i class="fas fa-times-circle text-red-500 mr-2"></i> Confirmar cancelación';
             modalQuestion.textContent = '¿Cancelar esta orden?';
             modalText.textContent = 'Esta acción marcará la orden como cancelada. No podrá revertirse.';
             modalCircle.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4';
             modalCircleIcon.className = 'fas fa-times text-red-600 text-xl';
             header.className = 'bg-gradient-to-r from-red-50 to-pink-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center';
+            extraFields.classList.remove('hidden');
+            acceptFields.classList.add('hidden');
+            cancelFields.classList.remove('hidden');
+        } else {
+            extraFields.classList.add('hidden');
+            acceptFields.classList.add('hidden');
+            cancelFields.classList.add('hidden');
         }
 
         showModal('orderStatusModal');
     }
 
+    function toggleEnvioLocalFields(checkbox) {
+        const campos = document.querySelectorAll('#acceptFields .envio-campo');
+        if (checkbox.checked) {
+            campos.forEach(el => {
+                el.style.display = 'none';
+                // Limpiar los campos ocultos para evitar validaciones
+                const input = el.querySelector('input');
+                if (input) input.value = '';
+            });
+        } else {
+            campos.forEach(el => el.style.display = '');
+        }
+    }
 
     function submitOrderStatusChange() {
         const id = document.getElementById('orderIdInput').value;
         const status = document.getElementById('orderNewStatusInput').value;
+        let extraData = {};
+        if (status === 'COMPLETED') {
+            const envioLocal = document.getElementById('orderEnvioLocalCheck').checked;
+            extraData.envio_local = envioLocal ? 1 : 0;
+            if (!envioLocal) {
+                extraData.clave = document.getElementById('orderClaveInput').value.trim();
+                extraData.empresa = document.getElementById('orderEmpresaInput').value.trim();
+                extraData.link = document.getElementById('orderLinkInput').value.trim();
+                extraData.clave_recojo = document.getElementById('orderClaveRecojoInput').value.trim();
+            }
+        } else if (status === 'CANCELLED') {
+            extraData.motivo = document.getElementById('orderMotivoInput').value.trim();
+        }
+
+        // Validar campos antes de enviar
+        let valid = true;
+        if (status === 'COMPLETED') {
+            const envioLocal = document.getElementById('orderEnvioLocalCheck').checked;
+            if (!envioLocal) {
+                if (!extraData.clave) {
+                    document.getElementById('orderClaveInput').classList.add('border-red-500');
+                    valid = false;
+                }
+                if (!extraData.empresa) {
+                    document.getElementById('orderEmpresaInput').classList.add('border-red-500');
+                    valid = false;
+                }
+                if (!extraData.clave_recojo) {
+                    document.getElementById('orderClaveRecojoInput').classList.add('border-red-500');
+                    valid = false;
+                }
+                if (!extraData.link) {
+                    document.getElementById('orderLinkInput').classList.add('border-red-500');
+                    valid = false;
+                }
+            }
+        } else if (status === 'CANCELLED') {
+            if (!extraData.motivo) {
+                document.getElementById('orderMotivoInput').classList.add('border-red-500');
+                valid = false;
+            }
+        }
+        if (!valid) return;
+        // Mostrar/ocultar campos de envío según el check de Envío local
+        function toggleEnvioLocalFields(checkbox) {
+            const campos = document.querySelectorAll('#acceptFields .envio-campo');
+            if (checkbox.checked) {
+                campos.forEach(el => {
+                    el.style.display = 'none';
+                    // Limpiar los campos ocultos para evitar validaciones
+                    const input = el.querySelector('input');
+                    if (input) input.value = '';
+                });
+            } else {
+                campos.forEach(el => el.style.display = '');
+            }
+        }
+
+        // Mostrar modal de carga justo al confirmar
+        const loadingModal = document.getElementById('orderStatusLoadingModal');
+        loadingModal.classList.remove('hidden');
+        loadingModal.style.display = 'flex';
+        loadingModal.style.alignItems = 'center';
+        loadingModal.style.justifyContent = 'center';
+        loadingModal.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
 
         fetch('orders.php?action=update_status', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: `id=${encodeURIComponent(id)}&status=${encodeURIComponent(status)}`
+                body: `id=${encodeURIComponent(id)}&status=${encodeURIComponent(status)}&extraData=${encodeURIComponent(JSON.stringify(extraData))}`
             })
             .then(res => res.json())
             .then(data => {
+                closeModal('orderStatusModal');
                 if (data.success) {
-                    closeModal('orderStatusModal');
-                    setTimeout(() => location.reload(), 1000);
+                    loadingModal.querySelector('.text-lg').textContent = '¡Correo enviado!';
+                    loadingModal.querySelector('.text-sm').textContent = 'La notificación fue enviada correctamente.';
+                    loadingModal.querySelector('i').className = 'fas fa-check-circle text-green-500 text-3xl';
+                    setTimeout(() => {
+                        loadingModal.classList.add('hidden');
+                        loadingModal.style.display = 'none';
+                        location.reload();
+                    }, 1200);
+                } else {
+                    loadingModal.querySelector('.text-lg').textContent = 'Error al enviar correo';
+                    loadingModal.querySelector('.text-sm').textContent = 'Intenta nuevamente o revisa la orden.';
+                    loadingModal.querySelector('i').className = 'fas fa-times-circle text-red-500 text-3xl';
+                    setTimeout(() => {
+                        loadingModal.classList.add('hidden');
+                        loadingModal.style.display = 'none';
+                    }, 1800);
                 }
-                // Opcional: recargar tabla o parte del DOM con JS
-
             })
             .catch(err => {
                 closeModal('orderStatusModal');
-                showToast('Error al actualizar la orden', true);
+                loadingModal.querySelector('.text-lg').textContent = 'Error al enviar correo';
+                loadingModal.querySelector('.text-sm').textContent = 'Intenta nuevamente o revisa la orden.';
+                loadingModal.querySelector('i').className = 'fas fa-times-circle text-red-500 text-3xl';
+                setTimeout(() => {
+                    loadingModal.classList.add('hidden');
+                    loadingModal.style.display = 'none';
+                }, 1800);
             });
     }
 
@@ -818,11 +993,11 @@
     function disableOrderForm() {
         const form = document.getElementById('orderForm');
         const submitButton = document.getElementById('submitOrderText').parentElement;
-        
+
         // Deshabilitar el botón de envío
         submitButton.disabled = true;
         submitButton.classList.add('opacity-50', 'cursor-not-allowed');
-        
+
         // Deshabilitar todos los campos del formulario
         const formElements = form.querySelectorAll('input, select, textarea, button');
         formElements.forEach(element => {
@@ -831,7 +1006,7 @@
                 element.classList.add('opacity-50');
             }
         });
-        
+
         // Deshabilitar botones de acción en la tabla de productos
         const actionButtons = document.querySelectorAll('#orderProductsTable button');
         actionButtons.forEach(button => {
@@ -844,11 +1019,11 @@
     function enableOrderForm() {
         const form = document.getElementById('orderForm');
         const submitButton = document.getElementById('submitOrderText').parentElement;
-        
+
         // Habilitar el botón de envío
         submitButton.disabled = false;
         submitButton.classList.remove('opacity-50', 'cursor-not-allowed');
-        
+
         // Habilitar todos los campos del formulario
         const formElements = form.querySelectorAll('input, select, textarea, button');
         formElements.forEach(element => {
@@ -857,7 +1032,7 @@
                 element.classList.remove('opacity-50');
             }
         });
-        
+
         // Habilitar botones de acción en la tabla de productos
         const actionButtons = document.querySelectorAll('#orderProductsTable button');
         actionButtons.forEach(button => {
@@ -975,13 +1150,13 @@
                 } else {
                     // En caso de error, habilitar el formulario nuevamente
                     enableOrderForm();
-                    
+
                     if (data.errors) {
                         displayOrderFormErrors(data.errors);
                     } else {
                         showOrderFormMessage(data.message, 'error');
                     }
-                    
+
                     // Restaurar el texto del botón
                     document.getElementById('submitOrderText').textContent =
                         document.getElementById('orderFormAction').value === 'create' ? 'Crear Orden' : 'Actualizar Orden';
@@ -989,12 +1164,12 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                
+
                 // En caso de error de red, habilitar el formulario nuevamente
                 enableOrderForm();
-                
+
                 showOrderFormMessage('Error al procesar la solicitud', 'error');
-                
+
                 // Restaurar el texto del botón
                 document.getElementById('submitOrderText').textContent =
                     document.getElementById('orderFormAction').value === 'create' ? 'Crear Orden' : 'Actualizar Orden';

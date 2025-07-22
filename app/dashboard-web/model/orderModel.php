@@ -80,11 +80,20 @@ class OrderModel
             $conditions[] = "p.method = :payment_method";
             $params[':payment_method'] = $filters['payment_method'];
         }
-
-        // Filtro por estado de pago
+        // Filtro por estado de pago (puede ser uno o varios)
         if (!empty($filters['payment_status'])) {
+            if (is_array($filters['payment_status'])) {
+            $placeholders = [];
+            foreach ($filters['payment_status'] as $i => $status) {
+                $ph = ":payment_status_$i";
+                $placeholders[] = $ph;
+                $params[$ph] = $status;
+            }
+            $conditions[] = "p.status IN (" . implode(',', $placeholders) . ")";
+            } else {
             $conditions[] = "p.status = :payment_status";
             $params[':payment_status'] = $filters['payment_status'];
+            }
         }
 
         // Filtro por fecha desde
@@ -166,8 +175,18 @@ class OrderModel
 
         // Filtro por estado de pago
         if (!empty($filters['payment_status'])) {
+            if (is_array($filters['payment_status'])) {
+            $placeholders = [];
+            foreach ($filters['payment_status'] as $i => $status) {
+                $ph = ":payment_status_$i";
+                $placeholders[] = $ph;
+                $params[$ph] = $status;
+            }
+            $conditions[] = "p.status IN (" . implode(',', $placeholders) . ")";
+            } else {
             $conditions[] = "p.status = :payment_status";
             $params[':payment_status'] = $filters['payment_status'];
+            }
         }
 
         // Filtro por fecha desde
@@ -374,115 +393,114 @@ class OrderModel
 
 
     public function createCompleteOrder(array $data)
-{
-    try {
-        $this->pdo->beginTransaction();
+    {
+        try {
+            $this->pdo->beginTransaction();
 
-        // 1. Verificar si el cliente ya existe
-        $stmt = $this->pdo->prepare("SELECT id FROM clients WHERE email = :email OR dni = :dni");
-        $stmt->execute([
-            ':email' => $data['client']['email'],
-            ':dni'   => $data['client']['dni']
-        ]);
-        $client = $stmt->fetch(PDO::FETCH_ASSOC);
+            // 1. Verificar si el cliente ya existe
+            $stmt = $this->pdo->prepare("SELECT id FROM clients WHERE email = :email OR dni = :dni");
+            $stmt->execute([
+                ':email' => $data['client']['email'],
+                ':dni'   => $data['client']['dni']
+            ]);
+            $client = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($client) {
-            $clientId = $client['id'];
-        } else {
-            // 2. Crear cliente
-            $stmt = $this->pdo->prepare("
+            if ($client) {
+                $clientId = $client['id'];
+            } else {
+                // 2. Crear cliente
+                $stmt = $this->pdo->prepare("
                 INSERT INTO clients (name, email, phone, dni, gender, birth_date, status, created_at, updated_at)
                 VALUES (:name, :email, :phone, :dni, :gender, :birth_date, 'ACTIVE', NOW(), NOW())
             ");
-            $stmt->execute([
-                ':name'       => $data['client']['name'],
-                ':email'      => $data['client']['email'],
-                ':phone'      => $data['client']['phone'],
-                ':dni'        => $data['client']['dni'],
-                ':gender'     => $data['client']['gender'],
-                ':birth_date' => $data['client']['birth_date'],
-            ]);
-            $clientId = $this->pdo->lastInsertId();
-        }
+                $stmt->execute([
+                    ':name'       => $data['client']['name'],
+                    ':email'      => $data['client']['email'],
+                    ':phone'      => $data['client']['phone'],
+                    ':dni'        => $data['client']['dni'],
+                    ':gender'     => $data['client']['gender'],
+                    ':birth_date' => $data['client']['birth_date'],
+                ]);
+                $clientId = $this->pdo->lastInsertId();
+            }
 
-        // 3. Crear dirección del cliente
-        $stmt = $this->pdo->prepare("
+            // 3. Crear dirección del cliente
+            $stmt = $this->pdo->prepare("
             INSERT INTO client_addresses (client_id, address, city, region, postal_code, phone, is_default, created_at, updated_at)
             VALUES (:client_id, :address, :city, :region, :postal_code, :phone, true, NOW(), NOW())
         ");
-        $stmt->execute([
-            ':client_id'   => $clientId,
-            ':address'     => $data['address']['address'],
-            ':city'        => $data['address']['city'],
-            ':region'      => $data['address']['region'],
-            ':postal_code' => $data['address']['postal_code'],
-            ':phone'       => $data['address']['phone'],
-        ]);
-        $addressId = $this->pdo->lastInsertId();
+            $stmt->execute([
+                ':client_id'   => $clientId,
+                ':address'     => $data['address']['address'],
+                ':city'        => $data['address']['city'],
+                ':region'      => $data['address']['region'],
+                ':postal_code' => $data['address']['postal_code'],
+                ':phone'       => $data['address']['phone'],
+            ]);
+            $addressId = $this->pdo->lastInsertId();
 
-        // 4. Crear orden
-        $stmt = $this->pdo->prepare("
+            // 4. Crear orden
+            $stmt = $this->pdo->prepare("
             INSERT INTO orders (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at)
             VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW())
         ");
-        $stmt->execute([
-            ':client_id'      => $clientId,
-            ':address_id'     => $addressId,
-            ':total_price'    => $data['order']['total_price'],
-            ':status'         => $data['order']['status'] ?? 'PENDING',
-            ':discount_amount'=> $data['order']['discount_amount'] ?? 0,
-            ':coupon_id'      => $data['order']['coupon_id'] ?? null,
-            ':created_by'     => $data['order']['created_by'] ?? null,
-        ]);
-        $orderId = $this->pdo->lastInsertId();
+            $stmt->execute([
+                ':client_id'      => $clientId,
+                ':address_id'     => $addressId,
+                ':total_price'    => $data['order']['total_price'],
+                ':status'         => $data['order']['status'] ?? 'PENDING',
+                ':discount_amount' => $data['order']['discount_amount'] ?? 0,
+                ':coupon_id'      => $data['order']['coupon_id'] ?? null,
+                ':created_by'     => $data['order']['created_by'] ?? null,
+            ]);
+            $orderId = $this->pdo->lastInsertId();
 
-        // 5. Insertar items
-        if (!empty($data['items'])) {
-            $stmt = $this->pdo->prepare("
+            // 5. Insertar items
+            if (!empty($data['items'])) {
+                $stmt = $this->pdo->prepare("
                 INSERT INTO order_items (order_id, product_id, quantity, price)
                 VALUES (:order_id, :product_id, :quantity, :price)
             ");
-            foreach ($data['items'] as $item) {
-                $stmt->execute([
-                    ':order_id'   => $orderId,
-                    ':product_id' => $item['product_id'],
-                    ':quantity'   => $item['quantity'],
-                    ':price'      => $item['price'],
-                ]);
-                // Actualizar stock del producto
-                $updateStockSql = "UPDATE products SET stock = stock - :quantity WHERE id = :product_id AND stock >= :quantity";
-                $updateStockStmt = $this->pdo->prepare($updateStockSql);
-                $updateStockStmt->execute([
-                    ':quantity' => $item['quantity'],
-                    ':product_id' => $item['product_id']
-                ]);
+                foreach ($data['items'] as $item) {
+                    $stmt->execute([
+                        ':order_id'   => $orderId,
+                        ':product_id' => $item['product_id'],
+                        ':quantity'   => $item['quantity'],
+                        ':price'      => $item['price'],
+                    ]);
+                    // Actualizar stock del producto
+                    $updateStockSql = "UPDATE products SET stock = stock - :quantity WHERE id = :product_id AND stock >= :quantity";
+                    $updateStockStmt = $this->pdo->prepare($updateStockSql);
+                    $updateStockStmt->execute([
+                        ':quantity' => $item['quantity'],
+                        ':product_id' => $item['product_id']
+                    ]);
+                }
             }
-        }
 
-        // 6. Registrar pago (opcional)
-        if (!empty($data['payment'])) {
-            $stmt = $this->pdo->prepare("
+            // 6. Registrar pago (opcional)
+            if (!empty($data['payment'])) {
+                $stmt = $this->pdo->prepare("
                 INSERT INTO payments (order_id, method, status, paid_at, proof_url)
                 VALUES (:order_id, :method, :status, :paid_at, :proof_url)
             ");
-            $stmt->execute([
-                ':order_id'  => $orderId,
-                ':method'    => $data['payment']['method'],
-                ':status'    => $data['payment']['status'] ?? 'PENDING',
-                ':paid_at'   => $data['payment']['paid_at'] ?? null,
-                ':proof_url' => $data['payment']['proof_url'] ?? null,
-            ]);
+                $stmt->execute([
+                    ':order_id'  => $orderId,
+                    ':method'    => $data['payment']['method'],
+                    ':status'    => $data['payment']['status'] ?? 'PENDING',
+                    ':paid_at'   => $data['payment']['paid_at'] ?? null,
+                    ':proof_url' => $data['payment']['proof_url'] ?? null,
+                ]);
+            }
+
+            $this->pdo->commit();
+
+            return $orderId;
+        } catch (PDOException $e) {
+            $this->pdo->rollBack();
+            throw new Exception("Error al crear la orden completa: " . $e->getMessage());
         }
-
-        $this->pdo->commit();
-
-        return $orderId;
-
-    } catch (PDOException $e) {
-        $this->pdo->rollBack();
-        throw new Exception("Error al crear la orden completa: " . $e->getMessage());
     }
-}
 
     /**
      * Actualizar una orden
@@ -542,18 +560,18 @@ class OrderModel
     /**
      * Cambiar estado de una orden
      */
-    public function updateStatus(int $id, string $status)
+    public function updateStatus(int $id, string $status, array $extraData = [])
     {
-        // Si se cancela la orden, devolver el stock de los productos
+        require_once __DIR__ . '/../pdf/order_pdf_correo.php';
+
+        // 1. Si se cancela la orden, devolver el stock y enviar correo de rechazo con motivo
         if ($status === 'CANCELLED') {
-            // Obtener los items de la orden
+            // Devolver stock
             $itemSql = "SELECT product_id, quantity FROM order_items WHERE order_id = :order_id";
             $itemStmt = $this->pdo->prepare($itemSql);
             $itemStmt->bindValue(':order_id', $id, PDO::PARAM_INT);
             $itemStmt->execute();
             $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Sumar el stock de cada producto
             foreach ($items as $item) {
                 $updateStockSql = "UPDATE products SET stock = stock + :quantity WHERE id = :product_id";
                 $updateStockStmt = $this->pdo->prepare($updateStockSql);
@@ -561,7 +579,39 @@ class OrderModel
                 $updateStockStmt->bindValue(':product_id', $item['product_id'], PDO::PARAM_INT);
                 $updateStockStmt->execute();
             }
+            // Enviar correo de rechazo
+            if (function_exists('generateAndSendOrderPdf')) {
+                generateAndSendOrderPdf($this->pdo, $id, [
+                    'type' => 'cancelled',
+                    'motivo' => $extraData['motivo'] ?? '',
+                    'order_id' => $id
+                ]);
+            }
         }
+
+        // 2. Si se completa la orden, enviar correo con info de envío y boleta
+        if ($status === 'COMPLETED') {
+            if (function_exists('generateAndSendOrderPdf')) {
+                $envio = $extraData;
+                if (isset($extraData['envio']) && is_array($extraData['envio'])) {
+                    $envio = $extraData['envio'];
+                }
+                if (!isset($envio['nombre_empresa']) && isset($envio['empresa'])) {
+                    $envio['nombre_empresa'] = $envio['empresa'];
+                }
+                // Si es envío local, solo pasar ese flag
+                if (!empty($envio['envio_local'])) {
+                    $envio = ['envio_local' => 1];
+                }
+                generateAndSendOrderPdf($this->pdo, $id, [
+                    'type' => 'completed',
+                    'envio' => $envio,
+                    'order_id' => $id
+                ]);
+            }
+        }
+
+
         $sql = "UPDATE {$this->table} SET status = :status WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':status', $status);
