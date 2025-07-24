@@ -73,7 +73,39 @@
                                 <p class="text-sm text-gray-500">
                                     <?= htmlspecialchars($_SESSION['usuario_email'] ?? 'Sin email') ?>
                                 </p>
-                                <span class="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full mt-1">Administrador</span>
+                                <?php 
+                                // Determinar el nivel de acceso para mostrar la etiqueta correcta
+                                $roleBadgeClass = 'bg-gray-100 text-gray-700';
+                                $roleName = $_SESSION['usuario_rol'] ?? 'Sin rol';
+                                
+                                // Incluir helper de auth si no está ya incluido
+                                if (!isset($auth)) {
+                                    require_once __DIR__ . '/auth_helper.php';
+                                    global $pdo;
+                                    $auth = new AuthHelper($pdo);
+                                }
+                                
+                                if ($auth->isAdmin()) {
+                                    $roleBadgeClass = 'bg-red-100 text-red-700';
+                                    $roleDisplay = 'Administrador';
+                                } else {
+                                    $roleDisplay = $roleName;
+                                    
+                                    // Asignar color según el nombre del rol
+                                    if (stripos($roleName, 'admin') !== false) {
+                                        $roleBadgeClass = 'bg-red-100 text-red-700';
+                                    } elseif (stripos($roleName, 'editor') !== false || stripos($roleName, 'gestor') !== false) {
+                                        $roleBadgeClass = 'bg-orange-100 text-orange-700';
+                                    } elseif (stripos($roleName, 'venta') !== false || stripos($roleName, 'ventas') !== false) {
+                                        $roleBadgeClass = 'bg-purple-100 text-purple-700';
+                                    } elseif (stripos($roleName, 'cliente') !== false) {
+                                        $roleBadgeClass = 'bg-teal-100 text-teal-700';
+                                    } elseif (stripos($roleName, 'observador') !== false || stripos($roleName, 'lector') !== false) {
+                                        $roleBadgeClass = 'bg-blue-100 text-blue-700';
+                                    }
+                                }
+                                ?>
+                                <span class="inline-block px-2 py-1 text-xs <?= $roleBadgeClass ?> rounded-full mt-1"><?= $roleDisplay ?></span>
                             </div>
                         </div>
                     </div>

@@ -1,9 +1,16 @@
 <!-- Sidebar moderno con diseño claro y pastel -->
 <?php
-// solo si no lo has iniciado aún en el archivo
+// Incluir el helper de autenticación
+require_once __DIR__ . '/auth_helper.php';
+global $pdo; // La conexión debe estar disponible
 
 $nombre = $_SESSION['usuario_nombre'] ?? 'Invitado';
 $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
+$roleId = $_SESSION['usuario_role_id'] ?? null;
+$roleName = $_SESSION['usuario_rol'] ?? 'Sin rol';
+
+// Instanciar el helper de autenticación
+$auth = new AuthHelper($pdo);
 ?>
 <aside class="w-64 h-screen bg-gradient-to-b from-slate-50 to-blue-50 border-r border-blue-100 shadow-lg hidden lg:flex lg:flex-col">
     <!-- Header del sidebar con logo y nombre -->
@@ -40,6 +47,7 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
         </a>
 
         <!-- Productos (con submenu) -->
+        <?php if ($auth->canAccessTable('products') || $auth->canAccessTable('categories')): ?>
         <div>
             <button id="productos-toggle" class="w-full flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
                 <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center mr-3 shadow-sm">
@@ -56,14 +64,19 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
             </button>
             <!-- Submenu de Productos -->
             <div id="productos-submenu" class="ml-8 mt-2 space-y-1 hidden transition-all duration-300">
+                <?php if ($auth->hasPermission('products', 'read')): ?>
                 <a href="../products/productos.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors">
                     <div class="w-2 h-2 bg-green-300 rounded-full mr-3"></div>
                     Lista de Productos
                 </a>
+                <?php endif; ?>
+                
+                <?php if ($auth->hasPermission('categories', 'read')): ?>
                 <a href="../categories/categories.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors">
                     <div class="w-2 h-2 bg-green-300 rounded-full mr-3"></div>
                     Categorías
                 </a>
+                <?php endif; ?>
                 <!--
                 <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors">
                     <div class="w-2 h-2 bg-green-300 rounded-full mr-3"></div>
@@ -78,6 +91,7 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
         </div>
 
         <!-- Ventas (con submenu) -->
+        <?php if ($auth->canAccessTable('orders') || $auth->canAccessTable('payments')): ?>
         <div class="group">
             <button id="ventas-toggle" class="w-full flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
                 <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow">
@@ -94,14 +108,23 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
             </button>
             <!-- Submenu de Ventas -->
             <div id="ventas-submenu" class="ml-8 mt-2 space-y-1 hidden max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                <!-- El análisis de ventas está disponible para todos los usuarios con sesión -->
                 <a href="./analisis.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
                     <div class="w-2 h-2 bg-purple-300 rounded-full mr-3"></div>
                     Análisis de Ventas
                 </a>
+                
+                <?php if ($auth->hasPermission('orders', 'read')): ?>
                 <a href="../orden/orders.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
                     <div class="w-2 h-2 bg-purple-300 rounded-full mr-3"></div>
-                    Ventas
+                    <div class="flex flex-col">
+                        <span> Ventas </span>
+                        <span class="text-xs text-gray-500 group-hover:text-purple-700">Gestiona las ventas de los clientes</span>
+                    </div>
                 </a>
+                <?php endif; ?>
+                
+                <?php if ($auth->hasPermission('payments', 'read')): ?>
                 <a href="../payment/payments.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-green-50 hover:text-green-700 transition-colors group">
                     <div class="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
                     <div class="flex flex-col">
@@ -109,14 +132,22 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
                         <span class="text-xs text-gray-500 group-hover:text-green-700">Verifica pagos, estado y totales</span>
                     </div>
                 </a>
+                <?php endif; ?>
+                
+                <?php if ($auth->hasPermission('orders', 'read')): ?>
                 <a href="../orden/orderPendiente.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
                     <div class="w-2 h-2 bg-indigo-400 rounded-full mr-3"></div>
-                    Órdenes Pendientes
+                    <div class="flex flex-col">
+                        <span>Órdenes Pendientes</span>
+                        <span class="text-xs text-gray-500 group-hover:text-indigo-700">Notifica órdenes pendientes y su estado</span>
+                    </div>
                 </a>
+                <?php endif; ?>
             </div>
         </div>
 
         <!-- Usuarios (con submenu) -->
+        <?php if ($auth->canAccessTable('users') || $auth->canAccessTable('roles')): ?>
         <div>
             <button id="usuarios-toggle" class="w-full flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-orange-100 hover:to-yellow-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
                 <div class="w-8 h-8 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-lg flex items-center justify-center mr-3 shadow-sm">
@@ -133,19 +164,26 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
             </button>
             <!-- Submenu de Usuarios -->
             <div id="usuarios-submenu" class="ml-8 mt-2 space-y-1 hidden transition-all duration-300">
+                <?php if ($auth->hasPermission('users', 'read')): ?>
                 <a href="../users/usuarios.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-orange-50 hover:text-orange-700 transition-colors">
                     <div class="w-2 h-2 bg-orange-300 rounded-full mr-3"></div>
                     Gestión de Usuarios
                 </a>
-                <a href="#" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-orange-50 hover:text-orange-700 transition-colors">
+                <?php endif; ?>
+                
+                <?php if ($auth->hasPermission('roles', 'read')): ?>
+                <a href="../roles/roles.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-orange-50 hover:text-orange-700 transition-colors">
                     <div class="w-2 h-2 bg-orange-300 rounded-full mr-3"></div>
                     Roles y Permisos
                 </a>
+                <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Clientes -->
-        <a href="#" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-teal-100 hover:to-cyan-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+        <?php if ($auth->hasPermission('clients', 'read')): ?>
+        <a href="../clients/clientes.php" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-teal-100 hover:to-cyan-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
             <div class="w-8 h-8 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-lg flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-.5a2.121 2.121 0 11-3 3m3-3a2.121 2.121 0 01-3 3m3-3v6"></path>
@@ -153,8 +191,10 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
             </div>
             <span class="font-medium">Clientes</span>
         </a>
-        
+        <?php endif; ?>
+
         <!-- Carritos -->
+        <!--
         <div>
             <button id="carts-toggle" class="w-full flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-rose-100 hover:to-pink-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
                 <div class="w-8 h-8 bg-gradient-to-br from-rose-400 to-pink-500 rounded-lg flex items-center justify-center mr-3 shadow-sm">
@@ -169,16 +209,17 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
                     </svg>
                 </div>
             </button>
-            <!-- Submenu de Carritos -->
-            <div id="carts-submenu" class="ml-8 mt-2 space-y-1 hidden transition-all duration-300">
-                <a href="../carts/cart_manager.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-rose-50 hover:text-rose-700 transition-colors">
-                    <div class="w-2 h-2 bg-rose-300 rounded-full mr-3"></div>
-                    Gestión de Carritos
-                </a>
-            </div>
+           
+        <div id="carts-submenu" class="ml-8 mt-2 space-y-1 hidden transition-all duration-300">
+            <a href="../carts/cart_manager.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-rose-50 hover:text-rose-700 transition-colors">
+                <div class="w-2 h-2 bg-rose-300 rounded-full mr-3"></div>
+                Gestión de Carritos
+            </a>
         </div>
+        </div>
+        -->
 
-        <!-- Auditoría -->
+        <!-- Auditoría 
         <a href="#" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-indigo-100 hover:to-blue-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
             <div class="w-8 h-8 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-lg flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,6 +233,8 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
                 </svg>
             </div>
         </a>
+
+        -->
 
         <!-- Reportes -->
         <a href="#" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-indigo-100 hover:to-blue-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
@@ -324,3 +367,5 @@ $email = $_SESSION['usuario_email'] ?? 'correo@ejemplo.com';
         }
     });
 </script>
+<?php endif; // cierre de if ($auth->canAccessTable('products') || $auth->canAccessTable('categories')) ?>
+<?php endif; // cierre de if ($auth->canAccessTable('orders') || $auth->canAccessTable('payments')) ?>
