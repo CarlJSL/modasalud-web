@@ -371,13 +371,30 @@ class OrderModel
 
             // Crear registro de pago
             if (!empty($data['payment'])) {
-                $paymentSql = "INSERT INTO payments (order_id, method, status, paid_at, proof_url) VALUES (:order_id, :method, :status, :paid_at, :proof_url)";
+                $paymentSql = "INSERT INTO payments (order_id, method, status, paid_at, proof_url, verification_code, verified_at, admin_verified, verified_by) 
+                              VALUES (:order_id, :method, :status, :paid_at, :proof_url, :verification_code, :verified_at, :admin_verified, :verified_by)";
                 $paymentStmt = $this->pdo->prepare($paymentSql);
+                
+                // Determinar valores para campos adicionales basados en el estado del pago
+                $verified_at = null;
+                $admin_verified = false;
+                $verified_by = null;
+                
+                if ($data['payment']['status'] === 'PAID') {
+                    $verified_at = date('Y-m-d H:i:s');
+                    $admin_verified = true;
+                    $verified_by = $data['payment']['verified_by'] ?? null;
+                }
+                
                 $paymentStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
                 $paymentStmt->bindValue(':method', $data['payment']['method']);
                 $paymentStmt->bindValue(':status', $data['payment']['status'] ?? 'PENDING');
                 $paymentStmt->bindValue(':paid_at', $data['payment']['paid_at'] ?? null);
                 $paymentStmt->bindValue(':proof_url', $data['payment']['proof_url'] ?? null);
+                $paymentStmt->bindValue(':verification_code', $data['payment']['verification_code'] ?? null);
+                $paymentStmt->bindValue(':verified_at', $verified_at);
+                $paymentStmt->bindValue(':admin_verified', $admin_verified, PDO::PARAM_BOOL);
+                $paymentStmt->bindValue(':verified_by', $verified_by, PDO::PARAM_INT);
                 $paymentStmt->execute();
             }
 
@@ -481,15 +498,31 @@ class OrderModel
             // 6. Registrar pago (opcional)
             if (!empty($data['payment'])) {
                 $stmt = $this->pdo->prepare("
-                INSERT INTO payments (order_id, method, status, paid_at, proof_url)
-                VALUES (:order_id, :method, :status, :paid_at, :proof_url)
+                INSERT INTO payments (order_id, method, status, paid_at, proof_url, verification_code, verified_at, admin_verified, verified_by)
+                VALUES (:order_id, :method, :status, :paid_at, :proof_url, :verification_code, :verified_at, :admin_verified, :verified_by)
             ");
+                
+                // Determinar valores para campos adicionales basados en el estado del pago
+                $verified_at = null;
+                $admin_verified = false;
+                $verified_by = null;
+                
+                if ($data['payment']['status'] === 'PAID') {
+                    $verified_at = date('Y-m-d H:i:s');
+                    $admin_verified = true;
+                    $verified_by = $data['payment']['verified_by'] ?? null;
+                }
+                
                 $stmt->execute([
-                    ':order_id'  => $orderId,
-                    ':method'    => $data['payment']['method'],
-                    ':status'    => $data['payment']['status'] ?? 'PENDING',
-                    ':paid_at'   => $data['payment']['paid_at'] ?? null,
-                    ':proof_url' => $data['payment']['proof_url'] ?? null,
+                    ':order_id'          => $orderId,
+                    ':method'            => $data['payment']['method'],
+                    ':status'            => $data['payment']['status'] ?? 'PENDING',
+                    ':paid_at'           => $data['payment']['paid_at'] ?? null,
+                    ':proof_url'         => $data['payment']['proof_url'] ?? null,
+                    ':verification_code' => $data['payment']['verification_code'] ?? null,
+                    ':verified_at'       => $verified_at,
+                    ':admin_verified'    => $admin_verified,
+                    ':verified_by'       => $verified_by,
                 ]);
             }
 

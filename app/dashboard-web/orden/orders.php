@@ -30,6 +30,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                 }
 
                 if ($_POST['is_new_client'] == '1') {
+                    // Manejar subida de comprobante de pago si es necesario
+                    $proof_url = null;
+                    $payment_method = $_POST['payment_method'] ?? 'CASH';
+                    
+                    if (in_array($payment_method, ['PLIN', 'TRANSFER', 'CARD']) && isset($_FILES['proof_image']) && $_FILES['proof_image']['error'] === UPLOAD_ERR_OK) {
+                        $uploadDir = __DIR__ . '/../../uploads/payment_proofs/';
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0755, true);
+                        }
+                        $fileName = 'order_payment_' . time() . '_' . uniqid() . '.' . pathinfo($_FILES['proof_image']['name'], PATHINFO_EXTENSION);
+                        $uploadFile = $uploadDir . $fileName;
+                        if (move_uploaded_file($_FILES['proof_image']['tmp_name'], $uploadFile)) {
+                            $proof_url = 'uploads/payment_proofs/' . $fileName;
+                        }
+                    }
+
                     $data = [
                         'client' => [
                             'name' => $_POST['new_client_name'] ?? '',
@@ -55,12 +71,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                         ],
                         'items' => json_decode($_POST['items'], true) ?? [],
                         'payment' => [
-                            'method' => $_POST['payment_method'] ?? 'CASH',
+                            'method' => $payment_method,
                             'status' => $_POST['payment_status'] ?? 'PENDING',
-                            'paid_at' => !empty($_POST['paid_at']) ? $_POST['paid_at'] : null,
-                            'proof_url' => $_POST['proof_url'] ?? null
+                            'paid_at' => ($_POST['payment_status'] === 'PAID') ? date('Y-m-d H:i:s') : null,
+                            'proof_url' => $proof_url ?? $_POST['proof_url'] ?? null,
+                            'verification_code' => ($payment_method === 'YAPE') ? ($_POST['verification_code'] ?? null) : null,
+                            'verified_by' => ($_POST['payment_status'] === 'PAID') ? $_SESSION['usuario_id'] : null
                         ]
                     ];
+
+                    // Aplicar lógica de estado automático
+                    if ($data['payment']['status'] === 'PENDING') {
+                        $data['order']['status'] = 'PENDING';
+                    }
 
                     // Validaciones
                     $errors = [];
@@ -73,6 +96,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     if (empty($data['address']['region'])) $errors['region'] = 'Región requerida';
                     if (empty($data['order']['total_price']) || $data['order']['total_price'] <= 0) $errors['total_price'] = 'El total debe ser mayor a 0';
                     if (empty($data['items'])) $errors['items'] = 'Debe agregar al menos un producto';
+
+                    // Validaciones específicas de pago
+                    if ($payment_method === 'YAPE') {
+                        if (empty($_POST['verification_code'])) {
+                            $errors['verification_code'] = 'Código de verificación requerido para YAPE';
+                        }
+                    } elseif (in_array($payment_method, ['PLIN', 'TRANSFER', 'CARD'])) {
+                        if (empty($proof_url) && !isset($_POST['proof_url'])) {
+                            $errors['proof_image'] = 'Comprobante de pago requerido para ' . $payment_method;
+                        }
+                    }
 
                     if (!empty($errors)) {
                         echo json_encode(['success' => false, 'message' => 'Errores de validación', 'errors' => $errors]);
@@ -98,6 +132,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     }
                     break;
                 } else {
+                    // Manejar subida de comprobante de pago si es necesario
+                    $proof_url = null;
+                    $payment_method = $_POST['payment_method'] ?? 'CASH';
+                    
+                    if (in_array($payment_method, ['PLIN', 'TRANSFER', 'CARD']) && isset($_FILES['proof_image']) && $_FILES['proof_image']['error'] === UPLOAD_ERR_OK) {
+                        $uploadDir = __DIR__ . '/../../uploads/payment_proofs/';
+                        if (!is_dir($uploadDir)) {
+                            mkdir($uploadDir, 0755, true);
+                        }
+                        $fileName = 'order_payment_' . time() . '_' . uniqid() . '.' . pathinfo($_FILES['proof_image']['name'], PATHINFO_EXTENSION);
+                        $uploadFile = $uploadDir . $fileName;
+                        if (move_uploaded_file($_FILES['proof_image']['tmp_name'], $uploadFile)) {
+                            $proof_url = 'uploads/payment_proofs/' . $fileName;
+                        }
+                    }
+
                     $data = [
                         'client_id' => (int)$_POST['client_id'],
                         'address_id' => (int)$_POST['address_id'],
@@ -108,18 +158,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                         'created_by' => $_SESSION['usuario_id'],
                         'items' => json_decode($_POST['items'], true) ?? [],
                         'payment' => [
-                            'method' => $_POST['payment_method'] ?? 'CASH',
+                            'method' => $payment_method,
                             'status' => $_POST['payment_status'] ?? 'PENDING',
-                            'paid_at' => !empty($_POST['paid_at']) ? $_POST['paid_at'] : null,
-                            'proof_url' => $_POST['proof_url'] ?? null
+                            'paid_at' => ($_POST['payment_status'] === 'PAID') ? date('Y-m-d H:i:s') : null,
+                            'proof_url' => $proof_url ?? $_POST['proof_url'] ?? null,
+                            'verification_code' => ($payment_method === 'YAPE') ? ($_POST['verification_code'] ?? null) : null,
+                            'verified_by' => ($_POST['payment_status'] === 'PAID') ? $_SESSION['usuario_id'] : null
                         ]
                     ];
+
+                    // Aplicar lógica de estado automático
+                    if ($data['payment']['status'] === 'PENDING') {
+                        $data['status'] = 'PENDING';
+                    }
 
                     $errors = [];
                     if (empty($data['client_id'])) $errors['client_id'] = 'El cliente es requerido';
                     if (empty($data['address_id'])) $errors['address_id'] = 'La dirección de entrega es requerida';
                     if (empty($data['total_price']) || $data['total_price'] <= 0) $errors['total_price'] = 'El total debe ser mayor a 0';
                     if (empty($data['items'])) $errors['items'] = 'Debe agregar al menos un producto';
+
+                    // Validaciones específicas de pago
+                    if ($data['payment']['method'] === 'YAPE' && $data['payment']['status'] === 'PAID' && empty($data['payment']['verification_code'])) {
+                        $errors['verification_code'] = 'El código de verificación es requerido para pagos con Yape completados';
+                    }
+                    if (in_array($data['payment']['method'], ['PLIN', 'TRANSFER', 'CARD']) && $data['payment']['status'] === 'PAID' && empty($data['payment']['proof_url'])) {
+                        $errors['proof_image'] = 'El comprobante de pago es requerido para este método de pago';
+                    }
 
                     if (!empty($errors)) {
                         echo json_encode(['success' => false, 'message' => 'Errores de validación', 'errors' => $errors]);
@@ -717,32 +782,6 @@ include_once './../includes/head.php';
                 hasActiveFilters: <?= json_encode(array_filter($filters) ? true : false) ?>
             });
         });
-
-        // Función para actualizar estado de orden
-        function updateOrderStatus(orderId, status) {
-            if (confirm(`¿Está seguro de cambiar el estado de la orden #${orderId}?`)) {
-                fetch('orders.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: `action=update_status&id=${orderId}&status=${status}`
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert(data.message);
-                            location.reload();
-                        } else {
-                            alert('Error: ' + data.message);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        alert('Error al actualizar el estado');
-                    });
-            }
-        }
     </script>
 
 </body>

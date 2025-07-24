@@ -172,24 +172,43 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
                                 <select id="payment_method" name="payment_method"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onchange="togglePaymentFields()">
                                     <option value="CASH">Efectivo</option>
                                     <option value="YAPE">Yape</option>
                                     <option value="PLIN">Plin</option>
                                     <option value="TRANSFER">Transferencia</option>
+                                    <option value="CARD">Tarjeta</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Estado de Pago</label>
                                 <select id="payment_status" name="payment_status"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    onchange="updateOrderStatus()">
                                     <option value="PENDING">Pendiente</option>
                                     <option value="PAID">Pagado</option>
-                                    <option value="FAILED">Fallido</option>
                                 </select>
                             </div>
-                            <div>
+                            <!-- Campo para código de verificación (solo YAPE) -->
+                            <div id="verification_code_field" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Código de Verificación</label>
+                                <input type="text" id="verification_code" name="verification_code"
+                                    placeholder="Ingrese el código de verificación"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span id="verification_code-error" class="hidden text-red-500 text-xs mt-1"></span>
+                            </div>
+                            <!-- Campo para subir comprobante (PLIN, TRANSFER, CARD) -->
+                            <div id="proof_upload_field" class="hidden">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Comprobante de Pago</label>
+                                <input type="file" id="proof_image" name="proof_image" accept="image/*"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span id="proof_image-error" class="hidden text-red-500 text-xs mt-1"></span>
+                                <p class="text-xs text-gray-500 mt-1">Formatos aceptados: JPG, PNG, GIF (máx. 5MB)</p>
+                            </div>
+                            <!-- Campo de URL para edición -->
+                            <div id="proof_url_field" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">URL del Comprobante</label>
                                 <input type="text" id="proof_url" name="proof_url" placeholder="URL del comprobante"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
@@ -225,22 +244,9 @@
                     </div>
                 </div>
 
-                <!-- Estado de la Orden -->
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <h6 class="text-sm font-medium text-gray-800 mb-3 flex items-center">
-                        <i class="fas fa-flag text-red-600 mr-2"></i>
-                        Estado de la Orden
-                    </h6>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                        <select id="status" name="status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="PENDING">Pendiente</option>
-                            <option value="COMPLETED">Completada</option>
-                            <option value="CANCELLED">Cancelada</option>
-                        </select>
-                    </div>
-                </div>
+                <!-- Campo oculto para el estado de la orden (se define automáticamente) -->
+                <input type="hidden" id="status" name="status" value="PENDING">
+                
                 <div id="orderFormMessage" class="hidden mb-4"></div>
 
             </form>
@@ -336,6 +342,48 @@
         } else {
             document.getElementById('newAddressFields').classList.add('hidden');
         }
+    }
+
+    // Función para manejar campos de pago según el método seleccionado
+    function togglePaymentFields() {
+        const method = document.getElementById('payment_method').value;
+        const paymentStatus = document.getElementById('payment_status').value;
+        const verificationField = document.getElementById('verification_code_field');
+        const proofUploadField = document.getElementById('proof_upload_field');
+        const proofUrlField = document.getElementById('proof_url_field');
+        
+        // Ocultar todos los campos primero
+        verificationField.classList.add('hidden');
+        proofUploadField.classList.add('hidden');
+        proofUrlField.classList.add('hidden');
+        
+        // Mostrar campos según el método de pago y estado
+        if (method === 'YAPE' && paymentStatus === 'PAID') {
+            // Solo mostrar código de verificación para YAPE cuando el estado es PAID
+            verificationField.classList.remove('hidden');
+        } else if (method === 'PLIN' || method === 'TRANSFER' || method === 'CARD') {
+            // En modo edición, mostrar URL field, en creación mostrar upload field
+            const isEditing = document.getElementById('orderFormAction').value === 'update';
+            if (isEditing) {
+                proofUrlField.classList.remove('hidden');
+            } else {
+                proofUploadField.classList.remove('hidden');
+            }
+        }
+    }
+
+    // Función para actualizar el estado de la orden según el estado del pago
+    function updateOrderStatus() {
+        const paymentStatus = document.getElementById('payment_status').value;
+        const orderStatus = document.getElementById('status');
+        
+        if (paymentStatus === 'PENDING') {
+            orderStatus.value = 'PENDING';
+        }
+        // Si el pago es PAID, permitir que el usuario elija el estado de la orden
+        
+        // Actualizar los campos de pago cuando cambie el estado
+        togglePaymentFields();
     }
 </script>
 

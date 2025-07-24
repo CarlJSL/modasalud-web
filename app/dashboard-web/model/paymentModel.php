@@ -69,7 +69,7 @@ class PaymentModel
             $params[':order_status'] = $filters['order_status'];
         }
 
-        $sql .= " ORDER BY p.paid_at DESC";
+        $sql .= " ORDER BY p.order_id DESC";
 
         // ⚠️ Parámetros directos para LIMIT y OFFSET
         if ($limit > 0) {
