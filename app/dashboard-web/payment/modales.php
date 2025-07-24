@@ -48,6 +48,34 @@
         </div>
     </div>
 </div>
+<!-- Modal para pagos en efectivo -->
+<div id="cashPaymentModal" class="fixed inset-0 bg-black bg-opacity-15 hidden z-50 items-center justify-center p-4 modal-backdrop">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-md animate-fadeIn modal-content">
+        <div class="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h5 class="text-lg font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-money-bill-wave mr-2"></i>Verificar Pago en Efectivo
+            </h5>
+            <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closeModal('cashPaymentModal')">&times;</button>
+        </div>
+        <div class="p-6">
+            <div class="text-center">
+                <div class="mb-4 flex items-center gap-2 justify-center">
+                    <input type="checkbox" id="cashRejectedCheckbox">
+                    <label for="cashRejectedCheckbox" class="text-sm text-gray-700">Pago rechazado</label>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">
+                    Los pagos en efectivo no requieren comprobante. 
+                    Simplemente confirma si el pago fue recibido o recházalo si es necesario.
+                </p>
+            </div>
+            <input type="hidden" id="cashPaymentIdInput">
+        </div>
+        <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+            <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50" onclick="closeModal('cashPaymentModal')">Cancelar</button>
+            <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700" onclick="submitCashPayment()">Confirmar</button>
+        </div>
+    </div>
+</div>
 <!-- Modal para ver detalles del pago -->
 <div id="paymentDetailsModal" class="fixed inset-0 bg-black bg-opacity-15 hidden z-50 items-center justify-center p-4 modal-backdrop">
     <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl animate-fadeIn modal-content">
@@ -124,6 +152,25 @@ function submitVerificationCode() {
     } else {
         body += `&verification_code=&status=FAILED`;
     }
+    fetch('payments.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: body
+    })
+    .then(res => res.json())
+    .then(data => {
+        showAlert(data.message, data.success);
+        if (data.success) {
+            setTimeout(() => location.reload(), 1200);
+        }
+    });
+}
+function submitCashPayment() {
+    const paymentId = document.getElementById('cashPaymentIdInput').value;
+    const rejected = document.getElementById('cashRejectedCheckbox').checked;
+    let body = `action=cash_payment&id=${paymentId}`;
+    body += `&rejected=${rejected ? 'on' : ''}`;
+    
     fetch('payments.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},

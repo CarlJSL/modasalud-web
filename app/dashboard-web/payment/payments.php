@@ -52,6 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                 $msg = $finalStatus === 'PAID' ? 'Pago verificado y marcado como pagado' : 'Pago rechazado';
                 echo json_encode(['success' => $result, 'message' => $msg]);
                 break;
+            case 'cash_payment':
+                $id = (int)($_POST['id'] ?? $_GET['id']);
+                $rejected = isset($_POST['rejected']) && $_POST['rejected'] === 'on';
+                $verified_by = $_SESSION['usuario_id'] ?? null;
+                $result = $model->verifyOtherPayment($id, $rejected, $verified_by, null); // null para proof_url ya que no se requiere imagen
+                $msg = $rejected ? 'Pago en efectivo rechazado' : 'Pago en efectivo aceptado y marcado como pagado';
+                echo json_encode(['success' => $result, 'message' => $msg]);
+                break;
             case 'get':
                 $id = (int)$_GET['id'];
                 $payment = $model->getById($id);
@@ -298,6 +306,8 @@ $payments = $model->getAll($limit, $offset, $filters);
                                                 <?php if (($payment['order_status'] ?? '') === 'PENDING' && ($payment['status'] ?? '') === 'PENDING'): ?>
                                                     <?php if ($payment['method'] === 'YAPE'): ?>
                                                         <button onclick="triggerVerificationModal(<?= $payment['id'] ?>)" class="px-2 py-1 text-xs bg-green-500 text-white rounded">Verificar</button>
+                                                    <?php elseif ($payment['method'] === 'CASH'): ?>
+                                                        <button onclick="triggerCashPaymentModal(<?= $payment['id'] ?>)" class="px-2 py-1 text-xs bg-orange-500 text-white rounded">Aceptar/Rechazar</button>
                                                     <?php else: ?>
                                                         <button onclick="triggerOtherPaymentModal(<?= $payment['id'] ?>, '<?= $payment['status'] ?>')" class="px-2 py-1 text-xs bg-blue-500 text-white rounded">Verificar / Subir Imagen</button>
                                                     <?php endif; ?>
@@ -349,6 +359,13 @@ $payments = $model->getAll($limit, $offset, $filters);
         document.getElementById('yapeVerificationInputDiv').style.display = '';
         document.getElementById('verificationModal').classList.remove('hidden');
         document.getElementById('verificationModal').classList.add('flex');
+    }
+
+    function triggerCashPaymentModal(paymentId) {
+        document.getElementById('cashPaymentIdInput').value = paymentId;
+        document.getElementById('cashRejectedCheckbox').checked = false;
+        document.getElementById('cashPaymentModal').classList.remove('hidden');
+        document.getElementById('cashPaymentModal').classList.add('flex');
     }
 
     function viewPaymentDetails(paymentId) {
