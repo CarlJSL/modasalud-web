@@ -18,6 +18,189 @@ class OrderModel
     }
 
     /**
+     * Contar el total de órdenes que coinciden con los criterios de búsqueda y filtros
+     */
+   
+
+    /**
+     * Contar órdenes por estado de pago y estado de orden
+     */
+    public function getSalesByMonth($year = null)
+    {
+        if ($year === null) {
+            $year = date('Y');
+        }
+        
+        $sql = "SELECT 
+                    DATE_TRUNC('month', o.created_at) as month,
+                    COUNT(DISTINCT o.id) as total_orders,
+                    SUM(o.total_price) as total_sales,
+                    COUNT(DISTINCT o.client_id) as unique_customers
+                FROM {$this->table} o
+                LEFT JOIN payments p ON o.id = p.order_id
+                WHERE EXTRACT(YEAR FROM o.created_at) = :year
+                AND p.status = 'PAID'
+                GROUP BY DATE_TRUNC('month', o.created_at)
+                ORDER BY month";
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([':year' => $year]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error getting sales by month: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getSalesByCategory()
+    {
+        $sql = "SELECT 
+                    c.name as category_name,
+                    COUNT(DISTINCT o.id) as total_orders,
+                    SUM(oi.quantity) as total_items,
+                    SUM(oi.quantity * oi.price) as total_sales
+                FROM {$this->table} o
+                JOIN order_items oi ON o.id = oi.order_id
+                JOIN payments p ON o.id = p.order_id
+                JOIN products pr ON oi.product_id = pr.id
+                JOIN product_category_mapping pcm ON pr.id = pcm.product_id
+                JOIN categories c ON pcm.category_id = c.id
+                WHERE p.status = 'PAID'
+                GROUP BY c.id, c.name
+                ORDER BY total_sales DESC";
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error getting sales by category: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getTopSellingProducts($limit = 10)
+    {
+        $sql = "SELECT 
+                    p.id,
+                    p.name,
+                    p.price,
+                    c.name as category_name,
+                    SUM(oi.quantity) as total_quantity,
+                    SUM(oi.quantity * oi.price) as total_revenue
+                FROM products p
+                JOIN order_items oi ON p.id = oi.product_id
+                JOIN orders o ON oi.order_id = o.id
+                JOIN payments pm ON o.id = pm.order_id
+                LEFT JOIN product_category_mapping pcm ON p.id = pcm.product_id
+                LEFT JOIN categories c ON pcm.category_id = c.id
+                WHERE pm.status = 'PAID'
+                GROUP BY p.id, p.name, p.price, c.name
+                ORDER BY total_quantity DESC
+                LIMIT :limit";
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error getting top selling products: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getDashboardStats()
+    {
+        try {
+            // Total ventas del mes actual
+            $currentMonthSales = $this->pdo->query("
+                SELECT COALESCE(SUM(o.total_price), 0)
+                FROM {$this->table} o
+                JOIN payments p ON o.id = p.order_id
+                WHERE p.status = 'PAID'
+                AND o.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+            ")->fetchColumn();
+
+            // Total órdenes del mes
+            $currentMonthOrders = $this->pdo->query("
+                SELECT COUNT(DISTINCT o.id)
+                FROM {$this->table} o
+                WHERE o.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+            ")->fetchColumn();
+
+            // Ticket promedio
+            $averageTicket = $this->pdo->query("
+                SELECT COALESCE(AVG(o.total_price), 0)
+                FROM {$this->table} o
+                JOIN payments p ON o.id = p.order_id
+                WHERE p.status = 'PAID'
+                AND o.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+            ")->fetchColumn();
+
+            // Clientes nuevos del mes
+            $newCustomers = $this->pdo->query("
+                SELECT COUNT(DISTINCT client_id)
+                FROM {$this->table}
+                WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
+            ")->fetchColumn();
+
+            return [
+                'current_month_sales' => $currentMonthSales,
+                'current_month_orders' => $currentMonthOrders,
+                'average_ticket' => $averageTicket,
+                'new_customers' => $newCustomers
+            ];
+        } catch (PDOException $e) {
+            error_log("Error getting dashboard stats: " . $e->getMessage());
+            return [
+                'current_month_sales' => 0,
+                'current_month_orders' => 0,
+                'average_ticket' => 0,
+                'new_customers' => 0
+            ];
+        }
+    }
+
+    public function countByOrderStatus($status)
+    {
+        $sql = "SELECT COUNT(*) FROM {$this->table} WHERE status = :status";
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([':status' => $status]);
+            return (int) $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            error_log("Error counting orders by status: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function countByPaymentStatus($payment_status, $order_status = null)
+    {
+        $sql = "SELECT COUNT(*) FROM {$this->table} o
+                LEFT JOIN payments p ON o.id = p.order_id
+                WHERE p.status = :payment_status";
+        
+        $params = [':payment_status' => $payment_status];
+        
+        if ($order_status !== null) {
+            $sql .= " AND o.status = :order_status";
+            $params[':order_status'] = $order_status;
+        }
+        
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return (int) $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            error_log("Error counting orders by payment status: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
      * Obtener órdenes con búsqueda opcional, paginadas.
      */
     public function getAll(int $limit = 10, int $offset = 0, string $search = '', array $filters = [])
@@ -147,9 +330,12 @@ class OrderModel
      */
     public function count($search = '', $filters = [])
     {
-        $sql = "SELECT COUNT(DISTINCT o.id) FROM {$this->table} o
+        $sql = "SELECT COUNT(DISTINCT o.id)
+                FROM {$this->table} o
                 LEFT JOIN clients c ON o.client_id = c.id
                 LEFT JOIN payments p ON o.id = p.order_id
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN users u ON o.created_by = u.id
                 WHERE 1=1";
 
         $conditions = [];

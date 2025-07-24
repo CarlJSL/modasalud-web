@@ -32,7 +32,7 @@ $auth = new AuthHelper($pdo);
     <!-- Navegación principal con scroll -->
     <nav class="mt-6 px-4 space-y-2 flex-1 overflow-y-auto pb-4">
         <!-- Dashboard / Inicio -->
-        <a href="../ventas/analisis.php" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+        <a href="../ventas/dashboard.php" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
             <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
@@ -108,11 +108,11 @@ $auth = new AuthHelper($pdo);
             </button>
             <!-- Submenu de Ventas -->
             <div id="ventas-submenu" class="ml-8 mt-2 space-y-1 hidden max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-                <!-- El análisis de ventas está disponible para todos los usuarios con sesión -->
+                <!-- El análisis de ventas está disponible para todos los usuarios con sesión 
                 <a href="./analisis.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">
                     <div class="w-2 h-2 bg-purple-300 rounded-full mr-3"></div>
                     Análisis de Ventas
-                </a>
+                </a>-->
                 
                 <?php if ($auth->hasPermission('orders', 'read')): ?>
                 <a href="../orden/orders.php" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-700 transition-colors">

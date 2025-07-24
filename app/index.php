@@ -254,7 +254,7 @@
         if (data.success) {
             showToast('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
             setTimeout(() => {
-              window.location.href = "dashboard-web/ventas/analisis.php";
+              window.location.href = "dashboard-web/ventas/dashboard.php";
             }, 1500);
         } else {
             showToast(data.message || 'Credenciales incorrectas. Intenta nuevamente.', 'error');
