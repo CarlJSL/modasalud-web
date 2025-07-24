@@ -303,7 +303,11 @@ class OrderModel
                 method,
                 status,
                 paid_at,
-                proof_url
+                proof_url,
+                verification_code,
+                verified_at,
+                admin_verified,
+                verified_by
             FROM payments
             WHERE order_id = :order_id
         ");
@@ -328,8 +332,8 @@ class OrderModel
             $this->pdo->beginTransaction();
 
             // Insertar orden
-            $sql = "INSERT INTO {$this->table} (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at)
-                    VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW())";
+            $sql = "INSERT INTO {$this->table} (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at, order_source)
+                    VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW(), :order_source)";
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindValue(':client_id', $data['client_id'], PDO::PARAM_INT);
@@ -339,6 +343,7 @@ class OrderModel
             $stmt->bindValue(':discount_amount', $data['discount_amount'] ?? 0);
             $stmt->bindValue(':coupon_id', $data['coupon_id'] ?? null, PDO::PARAM_INT);
             $stmt->bindValue(':created_by', $data['created_by'] ?? null, PDO::PARAM_INT);
+            $stmt->bindValue(':order_source', $data['order_source'] ?? 'DASHBOARD', PDO::PARAM_STR);
 
             $result = $stmt->execute();
 
@@ -384,6 +389,7 @@ class OrderModel
                     $verified_at = date('Y-m-d H:i:s');
                     $admin_verified = true;
                     $verified_by = $data['payment']['verified_by'] ?? null;
+
                 }
                 
                 $paymentStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
@@ -458,8 +464,8 @@ class OrderModel
 
             // 4. Crear orden
             $stmt = $this->pdo->prepare("
-            INSERT INTO orders (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at)
-            VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW())
+            INSERT INTO orders (client_id, address_id, total_price, status, discount_amount, coupon_id, created_by, created_at, order_source)
+            VALUES (:client_id, :address_id, :total_price, :status, :discount_amount, :coupon_id, :created_by, NOW(), :order_source)
         ");
             $stmt->execute([
                 ':client_id'      => $clientId,
@@ -469,6 +475,7 @@ class OrderModel
                 ':discount_amount' => $data['order']['discount_amount'] ?? 0,
                 ':coupon_id'      => $data['order']['coupon_id'] ?? null,
                 ':created_by'     => $data['order']['created_by'] ?? null,
+                ':order_source' => $data['order']['order_source'] ?? 'DASHBOARD', // Asignar origen de la orden
             ]);
             $orderId = $this->pdo->lastInsertId();
 

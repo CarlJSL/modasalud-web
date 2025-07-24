@@ -75,13 +75,27 @@ try {
             break;
 
         case 'create_order':
-            // Leer datos JSON del body
-            $input = file_get_contents('php://input');
-            $data = json_decode($input, true);
-            
-            if (!$data) {
-                echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
-                exit;
+            // Manejar tanto FormData como JSON
+            if (isset($_POST['action'])) {
+                // Datos vienen de FormData (con archivos)
+                $client = is_string($_POST['client']) ? json_decode($_POST['client'], true) : $_POST['client'];
+                $address = is_string($_POST['address']) ? json_decode($_POST['address'], true) : $_POST['address'];
+                $isExistingClient = filter_var($_POST['is_existing_client'], FILTER_VALIDATE_BOOLEAN);
+                $paymentMethod = $_POST['payment_method'] ?? 'CASH';
+            } else {
+                // Datos vienen de JSON (sin archivos)
+                $input = file_get_contents('php://input');
+                $data = json_decode($input, true);
+                
+                if (!$data) {
+                    echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
+                    exit;
+                }
+                
+                $client = $data['client'];
+                $address = $data['address'];
+                $isExistingClient = $data['is_existing_client'];
+                $paymentMethod = $data['payment_method'] ?? 'CASH';
             }
 
             // Obtener productos del carrito
@@ -94,6 +108,20 @@ try {
             // Calcular total
             $total = $cartModel->getCartTotal($cart_token);
 
+            // Manejar subida de comprobante de pago si es necesario
+            $proof_url = null;
+            if (in_array($paymentMethod, ['PLIN', 'TRANSFER']) && isset($_FILES['proof_image']) && $_FILES['proof_image']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../uploads/payment_proofs/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                $fileName = 'client_payment_' . time() . '_' . uniqid() . '.' . pathinfo($_FILES['proof_image']['name'], PATHINFO_EXTENSION);
+                $uploadFile = $uploadDir . $fileName;
+                if (move_uploaded_file($_FILES['proof_image']['tmp_name'], $uploadFile)) {
+                    $proof_url = 'uploads/payment_proofs/' . $fileName;
+                }
+            }
+
             // Preparar items para la orden
             $orderItems = [];
             foreach ($cart_items as $item) {
@@ -104,15 +132,23 @@ try {
                 ];
             }
 
-            if ($data['is_existing_client']) {
+            // Preparar datos de pago
+            $paymentData = [
+                'method' => $paymentMethod,
+                'status' => 'PENDING',
+                'proof_url' => $proof_url,
+                'verification_code' => ($paymentMethod === 'YAPE') ? ($_POST['verification_code'] ?? null) : null
+            ];
+
+            if ($isExistingClient) {
                 // Cliente existente
-                $clientId = $data['client']['id'];
+                $clientId = $client['id'];
                 $addressId = null;
 
                 // Manejar dirección
-                if (isset($data['address']['id'])) {
+                if (isset($address['id'])) {
                     // Usar dirección existente
-                    $addressId = $data['address']['id'];
+                    $addressId = $address['id'];
                 } else {
                     // Crear nueva dirección para cliente existente
                     $stmt = $pdo->prepare("
@@ -121,11 +157,11 @@ try {
                     ");
                     $stmt->execute([
                         $clientId,
-                        $data['address']['address'],
-                        $data['address']['city'],
-                        $data['address']['region'],
-                        $data['address']['postal_code'] ?? '',
-                        $data['address']['phone'] ?? ''
+                        $address['address'],
+                        $address['city'],
+                        $address['region'],
+                        $address['postal_code'] ?? '',
+                        $address['phone'] ?? ''
                     ]);
                     $addressId = $pdo->lastInsertId();
                 }
@@ -139,11 +175,9 @@ try {
                     'discount_amount' => 0,
                     'coupon_id' => null,
                     'created_by' => null, // Orden desde web
+                    'order_source' => 'WEB', // Indicar que es desde web
                     'items' => $orderItems,
-                    'payment' => [
-                        'method' => $data['payment_method'],
-                        'status' => 'PENDING'
-                    ]
+                    'payment' => $paymentData
                 ];
 
                 $orderId = $orderModel->create($orderData);
@@ -151,32 +185,30 @@ try {
                 // Cliente nuevo
                 $orderData = [
                     'client' => [
-                        'name' => $data['client']['name'],
-                        'email' => $data['client']['email'],
-                        'phone' => $data['client']['phone'],
-                        'dni' => $data['client']['dni'],
-                        'gender' => $data['client']['gender'] ?? null,
-                        'birth_date' => $data['client']['birth_date'] ?? null
+                        'name' => $client['name'],
+                        'email' => $client['email'],
+                        'phone' => $client['phone'],
+                        'dni' => $client['dni'],
+                        'gender' => $client['gender'] ?? null,
+                        'birth_date' => $client['birth_date'] ?? null
                     ],
                     'address' => [
-                        'address' => $data['address']['address'],
-                        'city' => $data['address']['city'],
-                        'region' => $data['address']['region'],
-                        'postal_code' => $data['address']['postal_code'] ?? '',
-                        'phone' => $data['address']['phone'] ?? ''
+                        'address' => $address['address'],
+                        'city' => $address['city'],
+                        'region' => $address['region'],
+                        'postal_code' => $address['postal_code'] ?? '',
+                        'phone' => $address['phone'] ?? ''
                     ],
                     'order' => [
                         'total_price' => $total,
                         'status' => 'PENDING',
                         'discount_amount' => 0,
                         'coupon_id' => null,
-                        'created_by' => null // Orden desde web
+                        'created_by' => null, // Orden desde web
+                        'order_source' => 'WEB' // Indicar que es desde web
                     ],
                     'items' => $orderItems,
-                    'payment' => [
-                        'method' => $data['payment_method'],
-                        'status' => 'PENDING'
-                    ]
+                    'payment' => $paymentData
                 ];
 
                 $orderId = $orderModel->createCompleteOrder($orderData);

@@ -252,7 +252,7 @@
             </form>
         </div>
         <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
-            <button type="button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            <button type="button" id="cancelOrderBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                 onclick="closeModal('orderModal')">
                 Cancelar
             </button>
@@ -566,62 +566,150 @@
         document.getElementById('orderFormAction').value = 'create';
         document.getElementById('orderModalTitle').textContent = 'Nueva Orden';
         document.getElementById('submitOrderText').textContent = 'Crear Orden';
+        
+        // Resetear el botón de cancelar a "Cancelar"
+        document.getElementById('cancelOrderBtn').textContent = 'Cancelar';
 
         // Habilitar el formulario (en caso de que esté deshabilitado por una orden anterior)
         enableOrderForm();
 
         clearOrderFormErrors();
-        loadOrderData();
-        updateProductsList();
-        updateOrderTotal();
-
-        showModal('orderModal');
+        
+        // Cargar datos básicos y mostrar modal cuando termine
+        loadOrderData().then(() => {
+            updateProductsList();
+            updateOrderTotal();
+            showModal('orderModal');
+        }).catch(error => {
+            console.error('Error cargando datos básicos:', error);
+            showModal('orderModal'); // Mostrar el modal aunque falle la carga
+        });
     }
 
     // Función para abrir modal de editar orden
     function openEditModal(orderId) {
+        // Resetear variables globales
+        originalOrderData = {};
+        orderProducts = [];
+
         document.getElementById('orderForm').reset();
         document.getElementById('orderId').value = orderId;
         document.getElementById('orderFormAction').value = 'update';
         document.getElementById('orderModalTitle').textContent = 'Editar Orden';
         document.getElementById('submitOrderText').textContent = 'Actualizar Orden';
+        
+        // Resetear el botón de cancelar a "Cancelar"
+        document.getElementById('cancelOrderBtn').textContent = 'Cancelar';
 
         // Habilitar el formulario (en caso de que esté deshabilitado)
         enableOrderForm();
 
         clearOrderFormErrors();
-        loadOrderData();
+        
+        // Ocultar campos de nuevo cliente y nueva dirección
+        document.getElementById('newClientFields').classList.add('hidden');
+        document.getElementById('newAddressFields').classList.add('hidden');
+        document.getElementById('is_new_client').value = '0';
+        
+        // Cargar datos básicos primero y esperar a que terminen
+        loadOrderData().then(() => {
+            console.log('Datos básicos cargados completamente');
+            
+            // Mostrar el modal después de cargar los datos
+            showModal('orderModal');
 
-        // Cargar datos de la orden
-        fetch(`orders.php?action=get&id=${orderId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const order = data.order;
-                    originalOrderData = order;
+            // Cargar datos de la orden específica
+            fetch(`orders.php?action=get&id=${orderId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Datos de la orden recibidos:', data);
+                    if (data.success) {
+                        const order = data.order;
+                        originalOrderData = order;
+                        console.log('Estructura de order:', order);
+                        console.log('Payment data:', order.payment);
+                        console.log('Items data:', order.items);
 
-                    // Llenar el formulario con los datos
-                    document.getElementById('client_id').value = order.client_id;
-                    document.getElementById('address_id').value = order.address_id;
-                    document.getElementById('total_price').value = order.total_price;
-                    document.getElementById('status').value = order.status;
-                    document.getElementById('discount_amount').value = order.discount_amount || 0;
-                    document.getElementById('coupon_id').value = order.coupon_id || '';
+                        // Datos básicos de la orden - ahora que los selects están poblados
+                        if (order.client_id) {
+                            const clientSelect = document.getElementById('client_id');
+                            if (clientSelect) {
+                                clientSelect.value = order.client_id;
+                                console.log('Cliente seleccionado:', order.client_id);
+                                // Cargar direcciones del cliente
+                                loadClientAddresses(order.client_id).then(() => {
+                                    if (order.address_id) {
+                                        const addressSelect = document.getElementById('address_id');
+                                        if (addressSelect) addressSelect.value = order.address_id;
+                                        console.log('Dirección seleccionada:', order.address_id);
+                                    }
+                                });
+                            }
+                        }
+                        
+                        const totalPriceInput = document.getElementById('total_price');
+                        if (totalPriceInput) totalPriceInput.value = order.total_price || 0;
+                        
+                        const statusSelect = document.getElementById('status');
+                        if (statusSelect) statusSelect.value = order.status || 'PENDING';
+                        
+                        const discountInput = document.getElementById('discount_amount');
+                        if (discountInput) discountInput.value = order.discount_amount || 0;
+                        
+                        if (order.coupon_id) {
+                            const couponSelect = document.getElementById('coupon_id');
+                            if (couponSelect) couponSelect.value = order.coupon_id;
+                        }
+                        
+                        // Datos de pago
+                        if (order.payment) {
+                            if (order.payment.method) {
+                                const paymentMethodSelect = document.getElementById('payment_method');
+                                if (paymentMethodSelect) paymentMethodSelect.value = order.payment.method;
+                            }
+                            if (order.payment.status) {
+                                const paymentStatusSelect = document.getElementById('payment_status');
+                                if (paymentStatusSelect) paymentStatusSelect.value = order.payment.status;
+                            }
+                            if (order.payment.verification_code) {
+                                const verificationCodeInput = document.getElementById('verification_code');
+                                if (verificationCodeInput) verificationCodeInput.value = order.payment.verification_code;
+                            }
+                            if (order.payment.proof_url) {
+                                const proofUrlInput = document.getElementById('proof_url');
+                                if (proofUrlInput) proofUrlInput.value = order.payment.proof_url;
+                            }
+                        }
 
-                    // Cargar direcciones del cliente
-                    if (order.client_id) {
-                        loadClientAddresses(order.client_id);
+                        // Cargar productos de la orden
+                        if (order.items && order.items.length > 0) {
+                            orderProducts = order.items.map(item => ({
+                                product_id: item.product_id.toString(),
+                                quantity: parseInt(item.quantity),
+                                price: parseFloat(item.price),
+                                name: item.product_name, // Cambiar 'product_name' a 'name' para que coincida con updateProductsList
+                                product_size: item.product_size || '',
+                                stock: parseInt(item.product_stock) || parseInt(item.stock) || 999
+                            }));
+                            console.log('orderProducts mapeados:', orderProducts);
+                            updateProductsList();
+                            updateOrderTotal();
+                        }
+
+                        // Actualizar campos de pago según el método seleccionado
+                        togglePaymentFields();
+                    } else {
+                        alert('Error al cargar los datos de la orden: ' + data.message);
                     }
-                } else {
-                    alert('Error al cargar los datos de la orden: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al cargar los datos de la orden');
-            });
-
-        showModal('orderModal');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar los datos de la orden');
+                });
+        }).catch(error => {
+            console.error('Error cargando datos básicos:', error);
+            showModal('orderModal'); // Mostrar el modal aunque falle la carga de datos básicos
+        });
     }
 
     // Función para abrir modal de detalles de orden
@@ -648,8 +736,10 @@
 
     // Función para cargar datos necesarios para el formulario
     function loadOrderData() {
+        const promises = [];
+
         // Cargar clientes
-        fetch('orders.php?action=get_clients')
+        const clientsPromise = fetch('orders.php?action=get_clients')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -659,11 +749,12 @@
                     data.clients.forEach(client => {
                         clientSelect.innerHTML += `<option value="${client.id}">${client.name} - ${client.email}</option>`;
                     });
+                    console.log('Clientes cargados:', data.clients.length);
                 }
             });
 
         // Cargar productos
-        fetch('orders.php?action=get_products')
+        const productsPromise = fetch('orders.php?action=get_products')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -673,11 +764,12 @@
                     data.products.forEach(product => {
                         productSelect.innerHTML += `<option value="${product.id}" data-price="${product.price}" data-stock="${product.stock}">${product.name} - S/ ${product.price} (Stock: ${product.stock})</option>`;
                     });
+                    console.log('Productos cargados:', data.products.length);
                 }
             });
 
         // Cargar cupones
-        fetch('orders.php?action=get_coupons')
+        const couponsPromise = fetch('orders.php?action=get_coupons')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -688,13 +780,17 @@
                         const description = coupon.description || `${coupon.discount_value}${coupon.discount_type === 'PERCENTAGE' ? '%' : ' S/'} de descuento`;
                         couponSelect.innerHTML += `<option value="${coupon.id}" data-type="${coupon.discount_type}" data-value="${coupon.discount_value}">${coupon.code} - ${description}</option>`;
                     });
+                    console.log('Cupones cargados:', data.coupons.length);
                 }
             });
+
+        promises.push(clientsPromise, productsPromise, couponsPromise);
+        return Promise.all(promises);
     }
 
     // Función para cargar direcciones del cliente
     function loadClientAddresses(clientId) {
-        fetch(`orders.php?action=get_client_addresses&client_id=${clientId}`)
+        return fetch(`orders.php?action=get_client_addresses&client_id=${clientId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -705,7 +801,13 @@
                         const defaultText = address.is_default ? ' (Principal)' : '';
                         addressSelect.innerHTML += `<option value="${address.id}">${addressText}${defaultText}</option>`;
                     });
+                    return data.addresses;
                 }
+                return [];
+            })
+            .catch(error => {
+                console.error('Error loading addresses:', error);
+                return [];
             });
     }
 
@@ -1165,30 +1267,15 @@
             })
             .then(data => {
                 if (data.success) {
-                    // Mostrar mensaje de éxito con botón de PDF
-                    let successMessage = data.message;
-                    if (data.pdf_url && document.getElementById('orderFormAction').value === 'create') {
-                        successMessage += `
-                            <div class="mt-3 flex gap-2">
-                                <button type="button" onclick="window.open('${data.pdf_url}', '_blank')" 
-                                        class="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors">
-                                    <i class="fas fa-file-pdf mr-2"></i>
-                                    Ver PDF de la Orden
-                                </button>
-                                <button type="button" onclick="downloadOrderPDF('${data.pdf_url}', '${data.order_id}')" 
-                                        class="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors">
-                                    <i class="fas fa-download mr-2"></i>
-                                    Descargar PDF
-                                </button>
-                            </div>
-                        `;
-                    }
-
-                    showOrderFormMessage(successMessage, 'success');
+                    // Mostrar mensaje de éxito
+                    showOrderFormMessage(data.message, 'success');
 
                     // Cambiar el texto del botón a "Orden Creada" y mantenerlo deshabilitado
                     document.getElementById('submitOrderText').innerHTML =
                         '<i class="fas fa-check mr-1"></i>Orden Creada';
+
+                    // Cambiar el botón de cancelar a "Cerrar"
+                    document.getElementById('cancelOrderBtn').textContent = 'Cerrar';
 
                     setTimeout(() => {
                         location.reload();

@@ -258,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
 
             case 'get':
                 $id = (int)$_GET['id'];
-                $order = $model->getById($id);
+                $order = $model->getDetailedById($id);
                 if ($order) {
                     echo json_encode(['success' => true, 'order' => $order]);
                 } else {
