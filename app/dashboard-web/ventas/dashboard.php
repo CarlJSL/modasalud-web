@@ -2,7 +2,6 @@
 session_start();
 
 // Control de acceso basado en roles y permisos
-require_once __DIR__ . '/../includes/access_control.php';
 
 require_once __DIR__ . '/../../conexion/db.php';
 require_once __DIR__ . '/../model/orderModel.php';

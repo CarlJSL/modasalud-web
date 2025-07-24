@@ -16,11 +16,15 @@ $auth = new AuthHelper($pdo);
     <!-- Header del sidebar con logo y nombre -->
     <div class="p-6 border-b border-blue-100 bg-white/50 backdrop-blur-sm flex-shrink-0">
         <div class="flex items-center space-x-3">
-            <!-- Logo con gradiente pastel -->
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+            <!-- Imagen de logo personalizada -->
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500">
+                    <img src="../../img/tienda.png" alt="Logo Moda Salud" class="w-full h-full object-cover" />
+                <!-- Si no hay imagen, se muestra el SVG por defecto -->
+                <!--
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
+                -->
             </div>
             <div>
                 <h1 class="text-lg font-bold text-gray-800">MODA SALUD</h1>
@@ -237,7 +241,7 @@ $auth = new AuthHelper($pdo);
         -->
 
         <!-- Reportes -->
-        <a href="#" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-indigo-100 hover:to-blue-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
+        <a href="../ventas/reportes.php" class="group flex items-center px-4 py-3 text-gray-700 rounded-xl hover:bg-gradient-to-r hover:from-indigo-100 hover:to-blue-100 hover:shadow-md transition-all duration-300 ease-in-out transform hover:scale-105">
             <div class="w-8 h-8 bg-gradient-to-br from-indigo-400 to-blue-500 rounded-lg flex items-center justify-center mr-3 shadow-sm group-hover:shadow-md transition-shadow">
                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>

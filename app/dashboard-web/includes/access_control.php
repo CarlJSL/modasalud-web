@@ -38,6 +38,6 @@ $isAdmin = $auth->isAdmin();
 // Si no es admin, verificar si tiene acceso a esta página específica
 if (!$isAdmin && !$auth->canAccessPage($currentFile)) {
     // Redireccionar a una página de acceso denegado o al dashboard principal
-    header('Location: ../ventas/analisis.php?error=acceso_denegado');
+    header('Location: ../ventas/analisis.php');
     exit();
 }

@@ -66,7 +66,7 @@
           <p class="text-center text-sm">o puedes</p>
           <hr class="border-gray-400">
         </div>
-       <!--  <button class="bg-white border border-gray-300 py-2 w-full rounded-xl mt-5 flex justify-center items-center text-sm hover:scale-105 duration-300 text-gray-500">
+        <!--  <button class="bg-white border border-gray-300 py-2 w-full rounded-xl mt-5 flex justify-center items-center text-sm hover:scale-105 duration-300 text-gray-500">
           <svg class="mr-3" width="30px" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
             <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
             <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
@@ -89,9 +89,9 @@
             <i class="fas fa-store mr-2"></i> Ir a la Tienda
           </button>
         </div>
-        <div class="mt-5 text-xs border-b border-gray-400 py-4 text-[#392E2C]">
+        <!-- <div class="mt-5 text-xs border-b border-gray-400 py-4 text-[#392E2C]">
           <a href="#">¿Olvidaste tu contraseña?</a>
-        </div>
+        </div>-->
       </div>
 
       <div class="sm:block hidden w-1/2">
@@ -235,31 +235,31 @@
     fetch("./dashboard-web/users/login.php", {
         method: "POST",
         body: formData
-    })
-    .then(res => {
-      if (!res.ok) {
-        throw new Error(`Error HTTP: ${res.status}`);
-      }
-      return res.text(); // First get as text to debug
-    })
-    .then(text => {
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        console.error('Response is not valid JSON:', text);
-        throw new Error('Respuesta inválida del servidor');
-      }
-    })
-    .then(data => {
-        if (data.success) {
-            showToast('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
-            setTimeout(() => {
-              window.location.href = "dashboard-web/ventas/dashboard.php";
-            }, 1500);
-        } else {
-            showToast(data.message || 'Credenciales incorrectas. Intenta nuevamente.', 'error');
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Error HTTP: ${res.status}`);
         }
-    })
+        return res.text(); // First get as text to debug
+      })
+      .then(text => {
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          console.error('Response is not valid JSON:', text);
+          throw new Error('Respuesta inválida del servidor');
+        }
+      })
+      .then(data => {
+        if (data.success) {
+          showToast('¡Inicio de sesión exitoso! Redirigiendo...', 'success');
+          setTimeout(() => {
+            window.location.href = "dashboard-web/ventas/dashboard.php";
+          }, 1500);
+        } else {
+          showToast(data.message || 'Credenciales incorrectas. Intenta nuevamente.', 'error');
+        }
+      })
       .catch(error => {
         console.error('Error:', error);
         showToast('Error de conexión. Por favor, intenta nuevamente.', 'error');
